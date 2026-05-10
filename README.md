@@ -18,13 +18,13 @@ The primary users are the project author and his son. If you find Lernen useful,
 
 ## Current status
 
-Lernen is in active development. The `v0.0.x` releases publish the
-project as it gets built, milestone by milestone. Installing a release
-gets you everything that has shipped through that tag — no more, no
-less. The PRD (`docs/PRD.md`) describes the full system; this section
-tells you what is **actually working today**.
+Lernen is in active development. Pre-1.0 releases publish the project
+as it gets built, milestone by milestone. Installing a release gets you
+everything that has shipped through that tag — no more, no less. The
+PRD (`docs/PRD.md`) describes the full system; this section tells you
+what is **actually working today**.
 
-### Shipped (v0.0.1)
+### Shipped (v0.1.0)
 
 - `lernen setup` — one-time backend configuration. Pick from Codex CLI,
   Gemini CLI, or OpenRouter. Validates the connection and persists
@@ -35,7 +35,7 @@ tells you what is **actually working today**.
   - **Stage 1 — Calibration.** Diagnostic dialogue producing
     `current_model`, `gaps`, and `prior_languages`.
   - **Stage 2 — Recommendation.** Language + curriculum recommendation
-    grounded in your goals and calibration. (v0.0.1 only ships the
+    grounded in your goals and calibration. (v0.1.0 only ships the
     Python `LanguageAdapter`.)
   - **Stage 3 — Source ingestion.** Three slash commands during the
     mentor dialogue — `/paste`, `/url <url>`, `/pdf <path>` — feed a
@@ -55,7 +55,7 @@ tells you what is **actually working today**.
   command surface (`/help`, `/clear`, `/history`, `/copy`, `/quit`,
   `/select`).
 
-### Not yet shipped (planned in upcoming v0.0.x)
+### Not yet shipped (planned in upcoming releases)
 
 - **Stage 4 — Per-chapter scaffolding** (the heart of the forge).
   Co-authors competencies, exercises, and Socratic templates with the
@@ -72,7 +72,7 @@ tells you what is **actually working today**.
   AI-augmented engineering.
 - **More language adapters.** Go, Rust, Java, Perl, etc. — v0.x.
 
-If you install v0.0.1 today, you can run through Stages 0–3 of the
+If you install v0.1.0 today, you can run through Stages 0–3 of the
 forge to produce a curriculum manifest skeleton (`goals.yaml`,
 `starting_point.yaml`, `recommendation.yaml`, `ingestion.yaml`), but
 you won't be able to use it for actual tutoring until Stage 4 ships.
@@ -129,10 +129,10 @@ Lernen also integrates with [Context7](https://context7.com) for up-to-date libr
 ## Quick start
 
 ```sh
-# 1. Configure your inference backend                  [v0.0.1: shipped]
+# 1. Configure your inference backend                  [v0.1.0: shipped]
 lernen setup
 
-# 2. Author a curriculum manifest skeleton             [v0.0.1: Stages 0–3 shipped]
+# 2. Author a curriculum manifest skeleton             [v0.1.0: Stages 0–3 shipped]
 lernen forge
 
 # 3. Phase 1 against a forge-generated manifest        [planned: needs Stage 4]
@@ -145,7 +145,7 @@ lernen gate
 lernen review
 ```
 
-In v0.0.1 only steps 1 and 2 produce useful output; see
+In v0.1.0 only steps 1 and 2 produce useful output; see
 [Current status](#current-status) above for the full breakdown.
 
 See `docs/PRD.md` for the full architecture and pedagogical philosophy.
