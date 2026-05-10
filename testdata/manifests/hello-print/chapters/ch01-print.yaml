@@ -1,0 +1,61 @@
+id: hello-print-ch01
+title: "Calling print()"
+source_ref:
+  type: test_fixture
+  url: ""
+  note: "No external source. This fixture is original Lernen test content."
+prerequisites: []
+competencies_introduced: ["python:print-output"]
+competencies_tested: ["python:print-output"]
+docs_libraries: ["/python/cpython"]
+exercises:
+  - id: hello-print-ex01
+    prompt: |
+      Write a Python program that prints your name. The program should output exactly
+      your name, followed by a newline.
+    competencies: ["python:print-output"]
+    test_scaffold: |
+      # Informational scaffold only — M1 does not run learner tests. Step 11's
+      # loader treats this field as opaque text.
+      def test_prints_something(captured):
+          assert captured.out.strip() != ""
+    forge_rationale: |
+      Anchor exercise. Confirms the learner can execute print() at all. Trivial by
+      design; the harness is being smoke-tested here, not the learner.
+
+  - id: hello-print-ex02
+    prompt: |
+      Write a Python program that prints two lines: "hello" on the first line and
+      "world" on the second.
+    competencies: ["python:print-output"]
+    test_scaffold: |
+      def test_prints_two_lines(captured):
+          lines = captured.out.splitlines()
+          assert lines == ["hello", "world"]
+    forge_rationale: |
+      Two-print exercise. Confirms the learner understands that print() implicitly
+      appends a newline and that two consecutive prints produce two lines.
+
+  - id: hello-print-ex03
+    prompt: |
+      Define a variable that holds a greeting string of your choice, then print the
+      variable. The greeting must come from a variable — not a string literal passed
+      directly to print().
+    competencies: ["python:print-output"]
+    test_scaffold: |
+      def test_greeting_via_variable(source):
+          # Weak structural check for a fixture: the source must contain an
+          # assignment and a print() call. Real test harnesses do better.
+          assert "=" in source and "print(" in source
+    forge_rationale: |
+      Variable-then-print. Introduces the idea that print() takes any expression,
+      not just a string literal — a small bridge toward chapters on assignment and
+      simple expressions.
+
+socratic_templates:
+  on_first_engage:
+    - "What do you expect print() to do? Predict the output before you write any code."
+  on_stuck:
+    - "Walk me through what you've tried. Where does what you saw differ from what you predicted?"
+  on_done:
+    - "If you removed the print() and just had the string on its own line, what would happen, and why?"

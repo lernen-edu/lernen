@@ -1,0 +1,16 @@
+- id: python:print-output
+  name: Producing output with print()
+  description: >
+    Understands that print() emits its argument(s) to stdout, separated by spaces
+    and terminated with a newline by default, and that print() itself returns None.
+  tier: foundation
+  layer: language-specific
+  observable_behaviors:
+    - "Predicts that calling print() with a string outputs that string followed by a newline."
+    - "Distinguishes between print() (a side effect) and a function that returns a value."
+    - "Knows that the value of a print() call is None, not the string that was printed."
+  forge_rationale: |
+    The simplest possible foundation competency for Python: produce output. Used in the
+    hello-print test fixture to exercise the manifest loader and the runtime tutor's
+    end-to-end loop. A real curriculum would never start this small; this exists only
+    to give the harness a known-good manifest that depends on no real source material.

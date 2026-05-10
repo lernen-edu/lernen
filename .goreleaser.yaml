@@ -1,0 +1,72 @@
+version: 2
+
+project_name: lernen
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: lernen
+    main: ./cmd/lernen
+    binary: lernen
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      # Windows on ARM64 isn't a priority for v0; revisit later.
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: lernen
+    name_template: "lernen_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - LICENSE-CONTENT
+      - README.md
+      - CONTENT_LICENSE_NOTE.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+
+release:
+  draft: false
+  prerelease: auto
+  header: |
+    ## Lernen {{ .Tag }}
+
+    Learn to think before you prompt.
+
+    Download the binary for your platform below. Verify the checksum
+    against `checksums.txt` before running.
+  footer: |
+    ---
+    See [the README](README.md) for installation instructions and
+    [the PRD](docs/PRD.md) for what Lernen is and is not.

@@ -1,0 +1,30 @@
+# golangci-lint configuration for lernen.
+# Sensible defaults; expand as the codebase grows. See AGENTS.md for code style.
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+    - revive
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/lernen-edu/lernen
+  revive:
+    rules:
+      - name: exported
+
+issues:
+  exclude-dirs:
+    - testdata

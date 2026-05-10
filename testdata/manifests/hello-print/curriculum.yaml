@@ -1,0 +1,15 @@
+schema_version: 1
+id: hello-print
+name: "Hello, print()"
+author_attribution: "Lernen test fixture"
+language: python
+source_url: ""
+license_note: |
+  Test fixture authored by Lernen for end-to-end testing of the manifest loader
+  and the runtime tutor harness. Not derivative of any external curriculum and
+  not intended for shipping as a real curriculum.
+version: "v0.1"
+phase: 1
+forge_version: "0.0.0-fixture"
+authored_at: "2026-05-05"
+authored_by: "lernen-fixture"
