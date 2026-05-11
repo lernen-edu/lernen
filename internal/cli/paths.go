@@ -87,6 +87,26 @@ func ProfileDir() (string, error) {
 	return p, nil
 }
 
+// ProgressDir returns the directory where lernen stores per-curriculum
+// runtime user state — current chapter pointer plus completed-chapter
+// records. Sibling to ManifestsDir() and ProfileDir(): on Linux/macOS
+// this is DataDir()/progress (i.e., ~/.local/share/lernen/progress
+// under default XDG_DATA_HOME); on Windows it is
+// %LOCALAPPDATA%\lernen\progress.
+//
+// The directory is created if it does not exist.
+func ProgressDir() (string, error) {
+	dir, err := DataDir()
+	if err != nil {
+		return "", err
+	}
+	p := filepath.Join(dir, "progress")
+	if err := os.MkdirAll(p, dirMode); err != nil {
+		return "", fmt.Errorf("paths: mkdir %s: %w", p, err)
+	}
+	return p, nil
+}
+
 // ensureDir resolves a platform-specific root via the supplied function and
 // ensures the directory exists.
 func ensureDir(resolve func() (string, error)) (string, error) {

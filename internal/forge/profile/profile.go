@@ -29,13 +29,19 @@ import (
 	"github.com/lernen-edu/lernen/internal/forge/goals"
 	"github.com/lernen-edu/lernen/internal/forge/ingestion"
 	"github.com/lernen-edu/lernen/internal/forge/recommendation"
+	"github.com/lernen-edu/lernen/internal/forge/reflection"
+	"github.com/lernen-edu/lernen/internal/forge/scaffold"
 )
 
 const (
-	goalsFilename          = "goals.yaml"
-	startingPointFilename  = "starting_point.yaml"
-	recommendationFilename = "recommendation.yaml"
-	ingestionFilename      = "ingestion.yaml"
+	goalsFilename                 = "goals.yaml"
+	startingPointFilename         = "starting_point.yaml"
+	recommendationFilename        = "recommendation.yaml"
+	ingestionFilename             = "ingestion.yaml"
+	classifiedChaptersFilename    = "classified_chapters.yaml"
+	manifestCompetenciesFilename  = "manifest_competencies.yaml"
+	reflectionFilename            = "reflection.yaml"
+	chapterScaffoldsDirname       = "chapter_scaffolds"
 )
 
 // stageFilenames is the ordered list of forge stage YAMLs that
@@ -54,6 +60,17 @@ var stageFilenames = []string{
 	startingPointFilename,
 	recommendationFilename,
 	ingestionFilename,
+	classifiedChaptersFilename,
+	manifestCompetenciesFilename,
+	reflectionFilename, // M3f
+}
+
+// stageDirs is the ordered list of forge stage directory trees that
+// participate in --reset / --restore / --list-backups alongside
+// stageFilenames. The reset/restore extension in Task 7 walks both
+// slices.
+var stageDirs = []string{
+	chapterScaffoldsDirname,
 }
 
 // fileMode is used when Save* creates a profile-output file. Profile
@@ -138,6 +155,21 @@ func parseBackupTimestamp(filename string) (string, time.Time, bool) {
 		}
 		return stage, ts.UTC(), true
 	}
+	for _, dir := range stageDirs {
+		prefix := dir + "."
+		if !strings.HasPrefix(trimmed, prefix) {
+			continue
+		}
+		tsRaw := strings.TrimPrefix(trimmed, prefix)
+		if len(tsRaw) != len(backupTimestampLayout) {
+			return "", time.Time{}, false
+		}
+		ts, err := time.Parse(backupTimestampLayout, tsRaw)
+		if err != nil {
+			continue
+		}
+		return dir, ts.UTC(), true
+	}
 	return "", time.Time{}, false
 }
 
@@ -153,7 +185,7 @@ func parseBackupTimestamp(filename string) (string, time.Time, bool) {
 // with the wrapping error, so the caller can report what was saved.
 // The user can recover via --restore=<ts> on the partial timestamp.
 func BackupAll(profileDir string, ts time.Time) ([]string, error) {
-	out := make([]string, 0, len(stageFilenames))
+	out := make([]string, 0, len(stageFilenames)+len(stageDirs))
 	for _, stage := range stageFilenames {
 		src := filepath.Join(profileDir, stage)
 		_, err := os.Stat(src)
@@ -164,6 +196,24 @@ func BackupAll(profileDir string, ts time.Time) ([]string, error) {
 			return out, fmt.Errorf("profile: stat %s: %w", src, err)
 		}
 		dst := filepath.Join(profileDir, backupFilename(stage, ts))
+		if err := os.Rename(src, dst); err != nil {
+			return out, fmt.Errorf("profile: rename %s -> %s: %w", src, dst, err)
+		}
+		out = append(out, dst)
+	}
+	for _, dir := range stageDirs {
+		src := filepath.Join(profileDir, dir)
+		info, err := os.Stat(src)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			return out, fmt.Errorf("profile: stat %s: %w", src, err)
+		}
+		if !info.IsDir() {
+			return out, fmt.Errorf("profile: %s exists but is not a directory", src)
+		}
+		dst := filepath.Join(profileDir, backupFilename(dir, ts))
 		if err := os.Rename(src, dst); err != nil {
 			return out, fmt.Errorf("profile: rename %s -> %s: %w", src, dst, err)
 		}
@@ -200,7 +250,7 @@ func BackupFromStage(profileDir, stage string, ts time.Time) ([]string, error) {
 	if startIdx < 0 {
 		return nil, fmt.Errorf("profile: unknown stage %q; supported: %s", stage, strings.Join(stageNames(), ", "))
 	}
-	out := make([]string, 0, len(stageFilenames)-startIdx)
+	out := make([]string, 0, len(stageFilenames)-startIdx+len(stageDirs))
 	for _, fn := range stageFilenames[startIdx:] {
 		src := filepath.Join(profileDir, fn)
 		_, err := os.Stat(src)
@@ -211,6 +261,24 @@ func BackupFromStage(profileDir, stage string, ts time.Time) ([]string, error) {
 			return out, fmt.Errorf("profile: stat %s: %w", src, err)
 		}
 		dst := filepath.Join(profileDir, backupFilename(fn, ts))
+		if err := os.Rename(src, dst); err != nil {
+			return out, fmt.Errorf("profile: rename %s -> %s: %w", src, dst, err)
+		}
+		out = append(out, dst)
+	}
+	for _, dir := range stageDirs {
+		src := filepath.Join(profileDir, dir)
+		info, err := os.Stat(src)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			return out, fmt.Errorf("profile: stat %s: %w", src, err)
+		}
+		if !info.IsDir() {
+			return out, fmt.Errorf("profile: %s exists but is not a directory", src)
+		}
+		dst := filepath.Join(profileDir, backupFilename(dir, ts))
 		if err := os.Rename(src, dst); err != nil {
 			return out, fmt.Errorf("profile: rename %s -> %s: %w", src, dst, err)
 		}
@@ -256,6 +324,14 @@ func Restore(profileDir string, backupTs, nowTs time.Time) error {
 		}
 	}
 	if !hasBackup {
+		for _, dir := range stageDirs {
+			if _, err := os.Stat(filepath.Join(profileDir, backupFilename(dir, backupTs))); err == nil {
+				hasBackup = true
+				break
+			}
+		}
+	}
+	if !hasBackup {
 		return fmt.Errorf("profile: no backup found at %s in %s", FormatBackupTimestamp(backupTs), profileDir)
 	}
 
@@ -285,6 +361,20 @@ func Restore(profileDir string, backupTs, nowTs time.Time) error {
 			return fmt.Errorf("profile: stat %s: %w", bak, err)
 		}
 		live := filepath.Join(profileDir, stage)
+		if err := os.Rename(bak, live); err != nil {
+			return fmt.Errorf("profile: rename %s -> %s (step 2; recover via --restore=%s): %w",
+				bak, live, FormatBackupTimestamp(nowTs), err)
+		}
+	}
+	for _, dir := range stageDirs {
+		bak := filepath.Join(profileDir, backupFilename(dir, backupTs))
+		if _, err := os.Stat(bak); err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			return fmt.Errorf("profile: stat %s: %w", bak, err)
+		}
+		live := filepath.Join(profileDir, dir)
 		if err := os.Rename(bak, live); err != nil {
 			return fmt.Errorf("profile: rename %s -> %s (step 2; recover via --restore=%s): %w",
 				bak, live, FormatBackupTimestamp(nowTs), err)
@@ -323,9 +413,6 @@ func ListBackups(profileDir string) ([]BackupSet, error) {
 	}
 	groups := make(map[time.Time]map[string]bool)
 	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
 		stage, ts, ok := parseBackupTimestamp(entry.Name())
 		if !ok {
 			continue
@@ -345,6 +432,12 @@ func ListBackups(profileDir string) ([]BackupSet, error) {
 		for _, stage := range stageFilenames {
 			if stages[stage] {
 				ordered = append(ordered, strings.TrimSuffix(stage, ".yaml"))
+			}
+		}
+		// stageDirs entries are already display names (no .yaml suffix to strip).
+		for _, dir := range stageDirs {
+			if stages[dir] {
+				ordered = append(ordered, dir)
 			}
 		}
 		out = append(out, BackupSet{Timestamp: ts, Stages: ordered})
@@ -473,6 +566,213 @@ func SaveIngestion(profileDir string, ing *ingestion.Ingestion) error {
 		return fmt.Errorf("profile: SaveIngestion: ingestion is nil")
 	}
 	return atomicWriteYAML(profileDir, IngestionPath(profileDir), ing)
+}
+
+// ClassifiedChaptersPath returns the profile path of the Pass 1 output.
+func ClassifiedChaptersPath(profileDir string) string {
+	return filepath.Join(profileDir, classifiedChaptersFilename)
+}
+
+// LoadClassifiedChapters reads the file. Returns (nil, nil) if absent.
+func LoadClassifiedChapters(profileDir string) (*scaffold.ClassifiedChapters, error) {
+	path := ClassifiedChaptersPath(profileDir)
+	var out scaffold.ClassifiedChapters
+	found, err := loadYAML(path, &out)
+	if err != nil {
+		return nil, fmt.Errorf("profile: load classified_chapters: %w", err)
+	}
+	if !found {
+		return nil, nil
+	}
+	return &out, nil
+}
+
+// SaveClassifiedChapters writes the file atomically with mode 0600.
+func SaveClassifiedChapters(profileDir string, c *scaffold.ClassifiedChapters) error {
+	if c == nil {
+		return fmt.Errorf("profile: SaveClassifiedChapters: c is nil")
+	}
+	if err := c.Validate(); err != nil {
+		return fmt.Errorf("profile: SaveClassifiedChapters: %w", err)
+	}
+	return atomicWriteYAML(profileDir, ClassifiedChaptersPath(profileDir), c)
+}
+
+// ChapterScaffoldsDir returns the directory under profileDir where Pass 2
+// writes per-chapter scaffold files. The dir is created lazily by
+// SaveChapterScaffold; callers should not assume it exists.
+func ChapterScaffoldsDir(profileDir string) string {
+	return filepath.Join(profileDir, chapterScaffoldsDirname)
+}
+
+// LoadChapterScaffold reads chapter_scaffolds/<id>.yaml. Returns (nil, nil)
+// if the file (or the directory) is absent.
+func LoadChapterScaffold(profileDir, chapterID string) (*scaffold.ChapterScaffold, error) {
+	path := filepath.Join(ChapterScaffoldsDir(profileDir), chapterID+".yaml")
+	var out scaffold.ChapterScaffold
+	found, err := loadYAML(path, &out)
+	if err != nil {
+		return nil, fmt.Errorf("profile: load chapter_scaffold %s: %w", chapterID, err)
+	}
+	if !found {
+		return nil, nil
+	}
+	return &out, nil
+}
+
+// SaveChapterScaffold writes chapter_scaffolds/<id>.yaml atomically with
+// mode 0600. Creates the chapter_scaffolds/ directory with mode 0700 if
+// it does not exist. The chapter id is read from s.ID; callers should
+// have validated it is non-empty before calling.
+func SaveChapterScaffold(profileDir string, s *scaffold.ChapterScaffold) error {
+	if s == nil {
+		return fmt.Errorf("profile: SaveChapterScaffold: s is nil")
+	}
+	if err := s.Validate(); err != nil {
+		return fmt.Errorf("profile: SaveChapterScaffold: %w", err)
+	}
+	dir := ChapterScaffoldsDir(profileDir)
+	if err := os.MkdirAll(dir, dirMode); err != nil {
+		return fmt.Errorf("profile: SaveChapterScaffold: mkdir: %w", err)
+	}
+	return atomicWriteYAML(dir, filepath.Join(dir, s.ID+".yaml"), s)
+}
+
+// ListChapterScaffolds returns the set of chapter ids that have a
+// scaffold file in chapter_scaffolds/. The returned map values are
+// always true (it's a set, not a presence/absence map). Files that
+// don't end in .yaml are ignored. An absent directory returns an
+// empty map and nil error.
+//
+// Used by Pass 2 resume detection: forge.Run computes the set
+// difference between classified_chapters[*].chapter_id and this map's
+// keys to find the next unscaffolded chapter.
+func ListChapterScaffolds(profileDir string) (map[string]bool, error) {
+	dir := ChapterScaffoldsDir(profileDir)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return map[string]bool{}, nil
+		}
+		return nil, fmt.Errorf("profile: ListChapterScaffolds: %w", err)
+	}
+	out := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(name, ".yaml") {
+			continue
+		}
+		// Reject files that look like .yaml.bak (extra suffix between
+		// .yaml and end-of-string would have been caught above; this
+		// is just for clarity).
+		id := strings.TrimSuffix(name, ".yaml")
+		if id == "" {
+			continue
+		}
+		out[id] = true
+	}
+	return out, nil
+}
+
+// ManifestCompetenciesPath returns the profile path of the aggregate
+// manifest-specific competencies file.
+func ManifestCompetenciesPath(profileDir string) string {
+	return filepath.Join(profileDir, manifestCompetenciesFilename)
+}
+
+// LoadManifestCompetencies reads the file. Returns (nil, nil) if absent.
+func LoadManifestCompetencies(profileDir string) (*scaffold.ManifestCompetencies, error) {
+	path := ManifestCompetenciesPath(profileDir)
+	var out scaffold.ManifestCompetencies
+	found, err := loadYAML(path, &out)
+	if err != nil {
+		return nil, fmt.Errorf("profile: load manifest_competencies: %w", err)
+	}
+	if !found {
+		return nil, nil
+	}
+	return &out, nil
+}
+
+// SaveManifestCompetencies writes the file atomically with mode 0600.
+func SaveManifestCompetencies(profileDir string, m *scaffold.ManifestCompetencies) error {
+	if m == nil {
+		return fmt.Errorf("profile: SaveManifestCompetencies: m is nil")
+	}
+	if err := m.Validate(); err != nil {
+		return fmt.Errorf("profile: SaveManifestCompetencies: %w", err)
+	}
+	return atomicWriteYAML(profileDir, ManifestCompetenciesPath(profileDir), m)
+}
+
+// AppendCompetencies merges defs into manifest_competencies.yaml.
+// Idempotent on existing IDs (first-write-wins; duplicates are silently
+// skipped). If the file does not exist, it is created with AuthoredAt
+// stamped to the current UTC time. If it exists, AuthoredAt is preserved.
+//
+// Atomicity: load-modify-save under the existing atomicWriteYAML helper
+// (rename-into-place). Concurrent appends are serialized by the OS rename
+// boundary; the only loss mode under truly concurrent invocations is a
+// "lost update" if two callers race the same competency id, but Pass 2
+// invokes this helper from a single goroutine so concurrency is not a
+// concern in practice.
+func AppendCompetencies(profileDir string, defs []scaffold.Competency) error {
+	mc, err := LoadManifestCompetencies(profileDir)
+	if err != nil {
+		return fmt.Errorf("profile: AppendCompetencies: load: %w", err)
+	}
+	if mc == nil {
+		mc = &scaffold.ManifestCompetencies{
+			SchemaVersion: scaffold.CurrentSchemaVersion,
+			AuthoredAt:    time.Now().UTC(),
+		}
+	}
+	existing := make(map[string]struct{}, len(mc.Competencies))
+	for _, c := range mc.Competencies {
+		existing[c.ID] = struct{}{}
+	}
+	for _, c := range defs {
+		if _, dup := existing[c.ID]; dup {
+			continue
+		}
+		mc.Competencies = append(mc.Competencies, c)
+		existing[c.ID] = struct{}{}
+	}
+	return SaveManifestCompetencies(profileDir, mc)
+}
+
+// ReflectionPath returns the profile path of the Stage 5 output.
+func ReflectionPath(profileDir string) string {
+	return filepath.Join(profileDir, reflectionFilename)
+}
+
+// LoadReflection reads the file. Returns (nil, nil) if absent.
+func LoadReflection(profileDir string) (*reflection.ReflectionResult, error) {
+	path := ReflectionPath(profileDir)
+	var out reflection.ReflectionResult
+	found, err := loadYAML(path, &out)
+	if err != nil {
+		return nil, fmt.Errorf("profile: load reflection: %w", err)
+	}
+	if !found {
+		return nil, nil
+	}
+	return &out, nil
+}
+
+// SaveReflection writes the file atomically with mode 0600. Validates
+// the result before writing.
+func SaveReflection(profileDir string, r *reflection.ReflectionResult) error {
+	if r == nil {
+		return fmt.Errorf("profile: SaveReflection: r is nil")
+	}
+	if err := r.Validate(); err != nil {
+		return fmt.Errorf("profile: SaveReflection: %w", err)
+	}
+	return atomicWriteYAML(profileDir, ReflectionPath(profileDir), r)
 }
 
 // loadYAML reads path and unmarshals into dst. Returns (true, nil) on

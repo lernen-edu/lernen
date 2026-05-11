@@ -82,7 +82,7 @@ func Run(ctx context.Context, opts Options) error {
 
 	wrapHandler := func(m tui.Model, _ string) (tui.Model, tea.Cmd) {
 		transcript := extractTranscript(m.History())
-		m = m.AppendSystemTurn("wrapping up — structuring your responses…")
+		m, sysCmd := m.AppendSystemTurn("wrapping up — structuring your responses…")
 		m = m.SetWaiting(true) // gate user input until QuitMsg fires
 
 		cmd := func() tea.Msg {
@@ -98,7 +98,7 @@ func Run(ctx context.Context, opts Options) error {
 			written = sp
 			return tea.QuitMsg{}
 		}
-		return m, cmd
+		return m, tea.Batch(sysCmd, cmd)
 	}
 
 	tuiOpts := tui.Options{

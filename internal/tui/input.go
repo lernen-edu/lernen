@@ -19,24 +19,9 @@ const (
 	slashHelp
 	// slashQuit terminates the session.
 	slashQuit
-	// slashClear visually clears the conversation viewport but keeps
-	// m.history intact so subsequent backend calls retain full context.
-	// Recover the visual via /history.
-	slashClear
-	// slashHistory re-renders m.history into the viewport. Useful after
-	// /clear or any time the user wants to scroll back to the start of
-	// the conversation.
-	slashHistory
 	// slashCopy copies the last tutor turn's content to the OS
 	// clipboard via the platform's native CLI (pbcopy / xclip / etc).
 	slashCopy
-	// slashSelect toggles program-level mouse capture. When off, the
-	// terminal handles mouse drags natively so the user can click-drag
-	// to select arbitrary text and copy with Cmd+C / Ctrl+Shift+C.
-	// Trade-off while off: two-finger trackpad scroll arrives as
-	// Up/Down arrows (cycles input history); use PgUp/PgDn instead.
-	// Toggling /select again restores scroll-forwarding mouse capture.
-	slashSelect
 	// slashHint is a bare "/" — show a one-line list of available
 	// commands so the user knows what they can type next.
 	slashHint
@@ -55,14 +40,8 @@ func (c slashCommand) String() string {
 		return "help"
 	case slashQuit:
 		return "quit"
-	case slashClear:
-		return "clear"
-	case slashHistory:
-		return "history"
 	case slashCopy:
 		return "copy"
-	case slashSelect:
-		return "select"
 	case slashHint:
 		return "hint"
 	case slashUnknown:
@@ -99,14 +78,8 @@ func parseSlashCommand(raw string) (slashCommand, string) {
 		return slashHelp, args
 	case "quit", "exit", "q":
 		return slashQuit, args
-	case "clear", "cls":
-		return slashClear, args
-	case "history":
-		return slashHistory, args
 	case "copy", "y":
 		return slashCopy, args
-	case "select", "sel":
-		return slashSelect, args
 	default:
 		return slashUnknown, args
 	}
@@ -120,12 +93,7 @@ func helpText(extras map[string]string) string {
 	commandsBlock := `Commands:
   /help, /h, /?     Show this help
   /quit, /exit, /q  Exit the session
-  /clear, /cls      Clear the viewport (history is kept; /history restores)
-  /history          Re-render the conversation history
   /copy, /y         Copy the tutor's last reply to the system clipboard
-  /select, /sel     Toggle text-selection mode (disables mouse capture so
-                    click-drag selects text; trade-off: scroll wheel will
-                    cycle input history while on — use PgUp/PgDn instead)
 `
 	restBlock := `
 Input:
@@ -134,21 +102,13 @@ Input:
   ctrl+j                Insert a newline (universal fallback)
   esc                   Cancel an in-flight tutor reply
   ctrl+u                Clear the input line
-  ctrl+l                Clear the conversation viewport (history is kept)
   up / down             Recall earlier / later input (at first / last line)
   ctrl+r                Reverse-search past inputs (enter to commit, esc to cancel)
 
-Scrollback (the conversation history above the input):
-  fn + up / fn + down   Page up / page down on macOS
-  pgup / pgdown         Page up / page down on Linux / external keyboard
-  trackpad / wheel      Two-finger scroll on macOS, scroll wheel elsewhere
-
-Selecting text (lernen captures the mouse for scrolling, so plain drag
-won't select unless selection mode is on):
-  /select               Toggle selection mode — drag freely without modifier
-  hold option + drag    macOS Terminal.app and iTerm2 default (no toggle)
-  hold shift + drag     Linux gnome-terminal, Windows Terminal (no toggle)
-  cmd+c / ctrl+shift+c  Copy after selecting (terminal-native shortcut)
+Scrollback and selection:
+  scroll up             Mouse wheel / trackpad scrolls the terminal's native scrollback
+  click and drag        Select text natively; cmd+c (macOS) or ctrl+shift+c (Linux) to copy
+  ctrl+l                Clear the visible screen (terminal-native; conversation stays in scrollback)
 
 Note: Shift+Enter is not supported. The Bubble Tea v1 runtime does not
 parse the Shift+Enter escape sequence; use alt+enter or ctrl+j instead.
@@ -182,7 +142,7 @@ that slip through are replaced with a marker.`
 // hintText is the one-line command list shown when the user submits a
 // bare "/". Lighter than /help so users discovering the surface aren't
 // flooded with text — /help is the next stop if they want detail.
-const hintText = "Available commands: /help · /clear · /history · /copy · /select · /quit"
+const hintText = "Available commands: /help · /copy · /quit"
 
 // slashCommandName extracts the command name (lowercase, no leading
 // slash) from raw input. Returns "" when raw is not a slash command

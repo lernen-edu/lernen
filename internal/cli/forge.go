@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -16,8 +19,15 @@ import (
 	"github.com/lernen-edu/lernen/internal/forge/ingestion"
 	"github.com/lernen-edu/lernen/internal/forge/profile"
 	"github.com/lernen-edu/lernen/internal/forge/recommendation"
+	"github.com/lernen-edu/lernen/internal/forge/reflection"
+	"github.com/lernen-edu/lernen/internal/forge/scaffold"
 	"github.com/lernen-edu/lernen/internal/tui"
 )
+
+// forgeVersion is the version string written to curriculum.yaml as
+// forge_version. Hardcoded for the initial M3f wiring; a followup will
+// derive it from internal/version once that helper exists.
+const forgeVersion = "v0.1.0"
 
 // ForgeDeps is the dependency-injection surface for `lernen forge`. The
 // production NewForgeCmd uses ProductionForgeDeps; tests pass mocks so
@@ -78,10 +88,20 @@ source ingestion, per-chapter scaffolding, and reflection. Each stage
 produces output files in your profile directory; running the command
 again resumes from the next incomplete stage.
 
+Stage 4 (scaffolding) runs in two passes. Pass 1 walks the chapter list
+from ingestion.yaml and tags each chapter orientation or content. Pass 2
+iterates unscaffolded chapters in a single TUI session and produces a
+chapter file per chapter under profile/chapter_scaffolds/.
+
+Stage 5 (reflection) walks you through what you authored and writes the
+runtime-shaped manifest to <data>/manifests/<curriculum-id>/ — at which
+point you can run "lernen work <curriculum-id>" to start Phase 1.
+
 Flags:
       --reset                    back up current session and start fresh from Stage 0
       --reset-stage=<name>       back up <name> and downstream stages, then re-run from <name>
-                                 (name is a file basename without .yaml: goals, starting_point, recommendation, ingestion)
+                                 (name is a stage basename: goals, starting_point, recommendation,
+                                 ingestion, scaffolding, scaffolding-pass2, reflection)
       --restore=<timestamp>      revert to backup at <timestamp> (e.g. 2026-05-09T14:30:00)
       --list-backups             list available backups, newest-first
   -h, --help                     help for forge`,
@@ -134,7 +154,7 @@ Flags:
 		"list available backups, newest-first")
 	// Same backtick trick: "<name>" displays as the flag's value name.
 	cmd.Flags().StringVar(&resetStageFlag, "reset-stage", "",
-		"back up `<name>` and downstream stages, then re-run from <name> (goals, starting_point, recommendation, ingestion)")
+		"back up `<name>` and downstream stages, then re-run from <name> (goals, starting_point, recommendation, ingestion, scaffolding, scaffolding-pass2, reflection)")
 	// main() prints the returned error; suppress cobra's duplicate.
 	cmd.SilenceUsage = true
 	cmd.SilenceErrors = true
@@ -205,41 +225,62 @@ func runForge(ctx context.Context, args forgeArgs, deps ForgeDeps) error {
 		return fmt.Errorf("forge: resolve profile dir: %w", err)
 	}
 
+	manifestRoot, err := ManifestsDir()
+	if err != nil {
+		return fmt.Errorf("forge: resolve manifests dir: %w", err)
+	}
+
 	opts := forge.Options{
-		Backend:       backend,
-		ProfileDir:    profileDir,
-		Stage0Run:     goals.Run,
-		Stage1Run:     calibration.Run,
-		Stage2Run:     recommendation.Run,
-		Stage3Run:     ingestion.Run,
-		SessionRunner: deps.SessionRunner,
-		ModelLabel:    modelLabel(&cfg),
-		DevStage:      args.devStage,
-		Reset:         args.reset,
-		Restore:       args.restore,
-		ListBackups:   args.listBackups,
-		ResetStage:    args.resetStage,
+		Backend:        backend,
+		ProfileDir:     profileDir,
+		Stage0Run:      goals.Run,
+		Stage1Run:      calibration.Run,
+		Stage2Run:      recommendation.Run,
+		Stage3Run:      ingestion.Run,
+		Stage4Pass1Run: scaffold.RunPass1,
+		Stage4Pass2Run: scaffold.RunPass2,
+		Stage5Run:      reflection.RunReflection,
+		Finalize:       reflection.Finalize,
+		SessionRunner:  deps.SessionRunner,
+		ModelLabel:     modelLabel(&cfg),
+		ManifestRoot:   manifestRoot,
+		ForgeVersion:   forgeVersion,
+		AuthoredBy:     resolveAuthoredBy(),
+		DevStage:       args.devStage,
+		Reset:          args.reset,
+		Restore:        args.restore,
+		ListBackups:    args.listBackups,
+		ResetStage:     args.resetStage,
 	}
 	return deps.ForgeRunner(ctx, opts)
 }
 
+// resolveAuthoredBy returns the value used for curriculum.yaml's
+// author_attribution and authored_by fields. Tries git config user.name
+// first; falls back to $USER; falls back to "lernen-forge".
+func resolveAuthoredBy() string {
+	out, err := exec.Command("git", "config", "user.name").Output()
+	if err == nil {
+		name := strings.TrimSpace(string(out))
+		if name != "" {
+			return name
+		}
+	}
+	if u := os.Getenv("USER"); u != "" {
+		return u
+	}
+	return "lernen-forge"
+}
+
 // productionForgeSessionRunner runs the actual Bubble Tea program for
-// the forge. Mirrors productionSessionRunner from work.go (alt-screen +
-// mouse-cell-motion).
-//
-// WithAltScreen gives the four-region pinned layout (header / viewport /
-// input / status) the full terminal canvas — without it the layout shares
-// space with whatever scrollback was already on screen.
-//
-// WithMouseCellMotion enables mouse-event capture so two-finger trackpad
-// scroll (and mouse-wheel) reach bubbles/viewport for scrollback. See
-// productionSessionRunner for the selection trade-off rationale.
+// the forge stages. Mirrors productionSessionRunner from work.go:
+// inline rendering (no altscreen), no program-level mouse capture, and
+// a one-time terminal clear (ANSI ESC[2J + cursor-home) before the
+// program runs so prior shell activity doesn't bleed into the first
+// paint.
 func productionForgeSessionRunner(opts tui.Options) error {
-	p := tea.NewProgram(
-		tui.New(opts),
-		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
-	)
+	fmt.Print("\x1b[2J\x1b[H")
+	p := tea.NewProgram(tui.New(opts))
 	_, err := p.Run()
 	return err
 }

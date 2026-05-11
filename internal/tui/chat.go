@@ -66,31 +66,6 @@ func styleForRole(r Role, styles *Styles) lipgloss.Style {
 	}
 }
 
-// renderConversation composes the chat history (and an optional in-flight
-// pending turn) into a single string suitable for viewport.SetContent.
-// Each turn is formatted with renderTurn and separated by a blank line;
-// the result has no trailing newline so the caller controls vertical
-// position. width is the content width budget passed through to renderTurn.
-// mdRenderer is the glamour markdown renderer applied to RoleTutor turns
-// only (user input and system messages stay plain); nil disables markdown
-// rendering and renderTurn falls back to plain wrapped text.
-func renderConversation(history []Turn, pending *Turn, width int, styles *Styles, mdRenderer *glamour.TermRenderer) string {
-	var sb strings.Builder
-	for i, t := range history {
-		if i > 0 {
-			sb.WriteString("\n\n")
-		}
-		sb.WriteString(renderTurn(t, width, styles, mdRenderer))
-	}
-	if pending != nil {
-		if len(history) > 0 {
-			sb.WriteString("\n\n")
-		}
-		sb.WriteString(renderTurn(*pending, width, styles, mdRenderer))
-	}
-	return sb.String()
-}
-
 // renderTurn formats a single Turn for display. Output is multi-line
 // when content contains newlines or wraps wider than width: every line
 // gets the role label in the gutter so wrapped content is unambiguous.

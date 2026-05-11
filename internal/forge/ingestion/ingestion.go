@@ -98,24 +98,24 @@ func Run(ctx context.Context, opts Options) error {
 	// handler — it appends a system turn guiding the user to paste and
 	// discuss, then returns. No async work needed.
 	pasteHandler := func(m tui.Model, _ string) (tui.Model, tea.Cmd) {
-		m = m.AppendSystemTurn("Paste mode: share the table of contents or chapter list directly in chat. " +
+		m, cmd := m.AppendSystemTurn("Paste mode: share the table of contents or chapter list directly in chat. " +
 			"The mentor will help you review and discuss it. When you're done, use /wrap.")
-		return m, nil
+		return m, cmd
 	}
 
 	// /url <URL>: fetch the URL and extract candidate chapters. Dispatches
 	// FetchURL off the main goroutine; results land as tui.SystemMsg turns
 	// in the Update loop. SetWaiting is intentionally skipped for /url and
-	// /pdf — there is no command hook to clear it after SystemMsg arrives,
-	// so we leave the input gated only by the normal idle state. The user
-	// can keep chatting while extraction runs.
+	// /pdf — extraction runs in the background and we want the user to be
+	// able to keep chatting while it finishes. ContextMsg arrival clears
+	// any in-flight waiting state when the extraction returns.
 	urlHandler := func(m tui.Model, args string) (tui.Model, tea.Cmd) {
 		url := strings.TrimSpace(args)
 		if url == "" {
-			m = m.AppendSystemTurn("Usage: /url <URL>  — provide a full https:// URL to the curriculum page.")
-			return m, nil
+			m, cmd := m.AppendSystemTurn("Usage: /url <URL>  — provide a full https:// URL to the curriculum page.")
+			return m, cmd
 		}
-		m = m.AppendSystemTurn(fmt.Sprintf("Fetching %s — extracting chapter candidates…", url))
+		m, sysCmd := m.AppendSystemTurn(fmt.Sprintf("Fetching %s — extracting chapter candidates…", url))
 		cmd := func() tea.Msg {
 			res, err := FetchURL(ctx, opts.Backend, url)
 			if err != nil {
@@ -125,7 +125,7 @@ func Run(ctx context.Context, opts Options) error {
 			// included in the conversation context the mentor sees.
 			return tui.ContextMsg{Text: renderCandidates(res, url)}
 		}
-		return m, cmd
+		return m, tea.Batch(sysCmd, cmd)
 	}
 
 	// /pdf <path>: read the PDF at path and extract candidate chapters.
@@ -133,10 +133,10 @@ func Run(ctx context.Context, opts Options) error {
 	pdfHandler := func(m tui.Model, args string) (tui.Model, tea.Cmd) {
 		path := strings.TrimSpace(args)
 		if path == "" {
-			m = m.AppendSystemTurn("Usage: /pdf <path>  — provide the local filesystem path to the PDF.")
-			return m, nil
+			m, cmd := m.AppendSystemTurn("Usage: /pdf <path>  — provide the local filesystem path to the PDF.")
+			return m, cmd
 		}
-		m = m.AppendSystemTurn(fmt.Sprintf("Reading PDF %s — extracting chapter candidates…", path))
+		m, sysCmd := m.AppendSystemTurn(fmt.Sprintf("Reading PDF %s — extracting chapter candidates…", path))
 		cmd := func() tea.Msg {
 			res, err := ReadPDF(ctx, opts.Backend, path)
 			if err != nil {
@@ -146,7 +146,7 @@ func Run(ctx context.Context, opts Options) error {
 			// included in the conversation context the mentor sees.
 			return tui.ContextMsg{Text: renderCandidates(res, path)}
 		}
-		return m, cmd
+		return m, tea.Batch(sysCmd, cmd)
 	}
 
 	// /wrap: run the structuring call and save ingestion.yaml. Mirrors the
@@ -154,7 +154,7 @@ func Run(ctx context.Context, opts Options) error {
 	// input, then the cmd runs Structure → SaveIngestion → returns tea.QuitMsg.
 	wrapHandler := func(m tui.Model, _ string) (tui.Model, tea.Cmd) {
 		transcript := extractTranscript(m.History())
-		m = m.AppendSystemTurn("wrapping up — structuring your responses…")
+		m, sysCmd := m.AppendSystemTurn("wrapping up — structuring your responses…")
 		m = m.SetWaiting(true)
 
 		cmd := func() tea.Msg {
@@ -170,7 +170,7 @@ func Run(ctx context.Context, opts Options) error {
 			written = ing
 			return tea.QuitMsg{}
 		}
-		return m, cmd
+		return m, tea.Batch(sysCmd, cmd)
 	}
 
 	tuiOpts := tui.Options{
