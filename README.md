@@ -24,58 +24,67 @@ everything that has shipped through that tag — no more, no less. The
 PRD (`docs/PRD.md`) describes the full system; this section tells you
 what is **actually working today**.
 
-### Shipped (v0.1.0)
+### Shipped (through v0.2.0)
 
-- `lernen setup` — one-time backend configuration. Pick from Codex CLI,
-  Gemini CLI, or OpenRouter. Validates the connection and persists
-  config under `~/.config/lernen/`.
-- `lernen forge` — interactive curriculum authoring through Stages 0–3:
+- **`lernen setup`** — one-time backend configuration. Pick from
+  Codex CLI, Gemini CLI, or OpenRouter. Validates the connection and
+  persists config under `~/.config/lernen/`.
+
+- **`lernen forge`** — interactive curriculum authoring through all
+  five stages, producing a complete published manifest:
   - **Stage 0 — Goals.** Demanding-mentor dialogue eliciting
     `target_capability`, `target_project`, and motivation context.
   - **Stage 1 — Calibration.** Diagnostic dialogue producing
     `current_model`, `gaps`, and `prior_languages`.
   - **Stage 2 — Recommendation.** Language + curriculum recommendation
-    grounded in your goals and calibration. (v0.1.0 only ships the
-    Python `LanguageAdapter`.)
-  - **Stage 3 — Source ingestion.** Three slash commands during the
-    mentor dialogue — `/paste`, `/url <url>`, `/pdf <path>` — feed a
-    candidate chapter list into the conversation. Heuristic extraction
-    handles common book layouts (PDF outline trees, HTML semantic
-    lists) with LLM fallback for unusual sources. The mentor proactively
-    triages frontmatter; you correct misfires in plain language.
-  - All four flags for managing forge state: `--reset`, `--restore=<ts>`,
-    `--list-backups`, `--reset-stage=<name>`.
-- `lernen work` — Phase 1 walking-skeleton TUI. Streams tutor responses
-  with the Phase 1 firewall active (code blocks longer than three lines
-  are stripped). Esc cancels mid-stream. Currently runs against a tiny
-  built-in `hello-print` fixture — useful for verifying the firewall
-  and stream pipeline, **not yet** a real learning experience because
-  Stage 4 (per-chapter scaffolding) hasn't shipped.
-- `/select` toggle for click-drag text selection in the TUI; full slash
-  command surface (`/help`, `/clear`, `/history`, `/copy`, `/quit`,
-  `/select`).
+    grounded in your goals and calibration. (v0.x ships the Python
+    `LanguageAdapter`; others follow.)
+  - **Stage 3 — Source ingestion.** Slash commands during the mentor
+    dialogue — `/paste`, `/url <url>`, `/pdf <path>` — feed a candidate
+    chapter list into the conversation. Heuristic extraction handles
+    common book layouts (PDF outline trees, HTML semantic lists) with
+    LLM fallback for unusual sources.
+  - **Stage 4 — Per-chapter scaffolding** *(new in v0.2.0)*. Two-pass
+    flow: Pass 1 classifies chapters (content / orientation / deferred);
+    Pass 2 co-authors competencies, exercises, and Socratic templates
+    per chapter, with a meta-concept teaching moment before each ask.
+  - **Stage 5 — Reflection** *(new in v0.2.0)*. Closing dialogue plus
+    the structurer-driven publish step that writes the runtime-loadable
+    manifest (`curriculum.yaml`, `competencies.yaml`, `chapters/*.yaml`,
+    `forge_log.md`) to `~/.local/share/lernen/manifests/<id>/`.
+  - Lifecycle flags for managing forge state: `--reset`,
+    `--restore=<ts>`, `--list-backups`, `--reset-stage=<name>`.
 
-### Not yet shipped (planned in upcoming releases)
+- **`lernen work <curriculum-id>`** — Phase 1 sessions against a real,
+  forge-published manifest:
+  - **Chapter navigation** *(new in v0.2.0)*. Resumes at the chapter
+    you left off. `/next` triggers a mentor-judged completion
+    structurer, records the demonstration evidence, and advances state.
+    `/chapter <id-or-1-indexed-number-or-prev-or-next>` jumps manually.
+    `/progress` shows your status across the curriculum. Progress
+    persists at `~/.local/share/lernen/progress/<id>/state.yaml`.
+    `--chapter <arg>` flag overrides the resume target for one
+    invocation without persisting.
+  - **Phase 1 firewall.** Code blocks longer than three lines are
+    stripped before reaching the screen; Esc cancels mid-stream.
+  - **Inline-rendered TUI** *(new in v0.2.0)*. Drag-to-select text and
+    mouse-wheel / trackpad scrollback work natively, no modifier keys
+    or mode toggles. Matches Claude Code / Codex CLI / Gemini CLI
+    conventions.
 
-- **Stage 4 — Per-chapter scaffolding** (the heart of the forge).
-  Co-authors competencies, exercises, and Socratic templates with the
-  user, with a meta-concept teaching moment before each ask. Until this
-  ships, `lernen work` against your forge-generated manifest has no
-  scaffolded chapters to walk through.
-- **Stage 5 — Reflection.** Closing dialogue that walks the user
-  through what they've built.
-- **Phase 1 mechanics on real manifests.** Explain-back gate, AI-off
-  practice mode (`lernen practice`), competency tracker.
-- **`lernen gate`** — the build/comprehension/debugging exam between
-  Phase 1 and Phase 2.
+- **TUI slash commands.** `/help`, `/copy`, `/quit`, plus the chapter
+  navigation commands above. Ctrl+L clears the visible screen
+  (terminal-native); scroll up in your terminal for prior conversation.
+
+### Not yet shipped (planned)
+
+- **Phase 1 polish.** Explain-back gate, AI-off practice mode
+  (`lernen practice`), spaced-repetition / weak-area drilling.
+- **`lernen gate`** — the build / comprehension / debugging exam
+  between Phase 1 and Phase 2.
 - **`lernen review` / `lernen exercise`** — Phase 2 commands for
   AI-augmented engineering.
-- **More language adapters.** Go, Rust, Java, Perl, etc. — v0.x.
-
-If you install v0.1.0 today, you can run through Stages 0–3 of the
-forge to produce a curriculum manifest skeleton (`goals.yaml`,
-`starting_point.yaml`, `recommendation.yaml`, `ingestion.yaml`), but
-you won't be able to use it for actual tutoring until Stage 4 ships.
+- **More language adapters.** Go, Rust, Java, Perl, etc.
 
 ## Install
 
@@ -132,10 +141,10 @@ Lernen also integrates with [Context7](https://context7.com) for up-to-date libr
 # 1. Configure your inference backend                  [v0.1.0: shipped]
 lernen setup
 
-# 2. Author a curriculum manifest skeleton             [v0.1.0: Stages 0–3 shipped]
+# 2. Author a curriculum manifest                      [v0.2.0: all 5 stages shipped]
 lernen forge
 
-# 3. Phase 1 against a forge-generated manifest        [planned: needs Stage 4]
+# 3. Phase 1 tutoring with chapter navigation          [v0.2.0: shipped]
 lernen work <curriculum-id>
 
 # 4. Capability gate between Phase 1 and Phase 2       [planned]
@@ -145,8 +154,9 @@ lernen gate
 lernen review
 ```
 
-In v0.1.0 only steps 1 and 2 produce useful output; see
-[Current status](#current-status) above for the full breakdown.
+Steps 1–3 produce a working forge-author-and-tutor loop in v0.2.0;
+steps 4–5 are pending. See [Current status](#current-status) above
+for the full breakdown.
 
 See `docs/PRD.md` for the full architecture and pedagogical philosophy.
 
