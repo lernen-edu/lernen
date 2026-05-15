@@ -24,7 +24,7 @@ everything that has shipped through that tag — no more, no less. The
 PRD (`docs/PRD.md`) describes the full system; this section tells you
 what is **actually working today**.
 
-### Shipped (through v0.2.0)
+### Shipped (through v0.3.0)
 
 - **`lernen setup`** — one-time backend configuration. Pick from
   Codex CLI, Gemini CLI, or OpenRouter. Validates the connection and
@@ -65,6 +65,19 @@ what is **actually working today**.
     persists at `~/.local/share/lernen/progress/<id>/state.yaml`.
     `--chapter <arg>` flag overrides the resume target for one
     invocation without persisting.
+  - **Competency tracking** *(new in v0.3.0)*. `/competency` shows a
+    read-only, foundation-first table of how many clean demonstrations
+    you've shown for each competency against its gate thresholds, plus
+    a gate-readiness summary. Pure derivation from your recorded
+    progress — no AI call. Demonstrations now carry an `outcome`
+    (progress state is schema v2; older state auto-migrates on load).
+  - **Explain-back gate** *(new in v0.3.0)*. Before the tutor engages
+    on a stuck-on-a-problem turn, it asks you to say what you tried and
+    what you think is wrong — closing the "just paste the error" reflex.
+    A genuine concept question passes straight through. The gate fails
+    open: if the check itself errors, the tutor engages anyway, never
+    blocking you. `--training-wheels-off` disables it (documented
+    escape hatch; not encouraged).
   - **Phase 1 firewall.** Code blocks longer than three lines are
     stripped before reaching the screen; Esc cancels mid-stream.
   - **Inline-rendered TUI** *(new in v0.2.0)*. Drag-to-select text and
@@ -72,14 +85,15 @@ what is **actually working today**.
     or mode toggles. Matches Claude Code / Codex CLI / Gemini CLI
     conventions.
 
-- **TUI slash commands.** `/help`, `/copy`, `/quit`, plus the chapter
-  navigation commands above. Ctrl+L clears the visible screen
+- **TUI slash commands.** `/help`, `/copy`, `/quit`, `/competency`,
+  plus the chapter navigation commands above. Ctrl+L clears the
+  visible screen
   (terminal-native); scroll up in your terminal for prior conversation.
 
 ### Not yet shipped (planned)
 
-- **Phase 1 polish.** Explain-back gate, AI-off practice mode
-  (`lernen practice`), spaced-repetition / weak-area drilling.
+- **Phase 1 polish.** AI-off practice mode (`lernen practice`),
+  spaced-repetition / weak-area drilling.
 - **`lernen gate`** — the build / comprehension / debugging exam
   between Phase 1 and Phase 2.
 - **`lernen review` / `lernen exercise`** — Phase 2 commands for
@@ -144,7 +158,7 @@ lernen setup
 # 2. Author a curriculum manifest                      [v0.2.0: all 5 stages shipped]
 lernen forge
 
-# 3. Phase 1 tutoring with chapter navigation          [v0.2.0: shipped]
+# 3. Phase 1 tutoring: chapter nav + explain-back gate [v0.3.0: shipped]
 lernen work <curriculum-id>
 
 # 4. Capability gate between Phase 1 and Phase 2       [planned]
@@ -154,7 +168,7 @@ lernen gate
 lernen review
 ```
 
-Steps 1–3 produce a working forge-author-and-tutor loop in v0.2.0;
+Steps 1–3 produce a working forge-author-and-tutor loop in v0.3.0;
 steps 4–5 are pending. See [Current status](#current-status) above
 for the full breakdown.
 
