@@ -141,6 +141,15 @@ type Options struct {
 	// SlashHandlers keys; missing entries default to "(no description)".
 	SlashHandlerHelp map[string]string
 
+	// ExplainBackGate, when non-nil, intercepts every non-slash user
+	// turn before backend dispatch. It returns a Cmd that resolves to
+	// GatePassMsg (proceed to dispatch) or GateHoldMsg (post the
+	// follow-up, return to input). nil ⇒ legacy direct-dispatch path,
+	// so the forge TUI and --training-wheels-off are unaffected. The
+	// closure is constructed in cli/work.go and must itself fail open
+	// (return GatePassMsg) on any evaluator error.
+	ExplainBackGate func(pendingTurn, recentTranscript string) tea.Cmd
+
 	// DispatchCtx is the context handed to backend.StreamChat. Defaults
 	// to context.Background when zero.
 	DispatchCtx context.Context
@@ -302,6 +311,14 @@ type ContextMsg struct {
 // command (via publishTurn) alongside the tea.Quit so the system
 // turn lands in terminal scrollback before the runtime unwinds.
 type QuitWithMessage struct{ Text string }
+
+// GatePassMsg signals the explain-back gate allowed the pending turn;
+// the model proceeds to backend dispatch.
+type GatePassMsg struct{}
+
+// GateHoldMsg signals the gate held the turn; Followup is shown to the
+// learner as a system turn and the model returns to input.
+type GateHoldMsg struct{ Followup string }
 
 // New constructs a fresh Model. The textarea is focused immediately so
 // the user can start typing the first message.
@@ -607,6 +624,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.waiting = false
 		return m, ctxCmd
 
+	case GatePassMsg:
+		m, cmd := m.startStream()
+		return m, cmd
+
+	case GateHoldMsg:
+		m.waiting = false
+		m, cmd := m.AppendSystemTurn(msg.Followup)
+		return m, cmd
+
 	case QuitWithMessage:
 		m, cmd := m.publishTurn(Turn{Role: RoleSystem, Content: msg.Text})
 		m.quitting = true
@@ -668,8 +694,16 @@ func (m Model) handleSubmit(text string) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(userCmd, unkCmd)
 	}
 
-	// slashNone: dispatch to backend.
+	// slashNone: gate (if configured) then dispatch to backend.
 	m, userCmd := m.publishTurn(Turn{Role: RoleUser, Content: text})
+	if m.opts.ExplainBackGate != nil {
+		m.waiting = true
+		// history WITHOUT the just-published user turn — that text is
+		// passed separately as pendingTurn, so excluding it here keeps
+		// the gate from seeing the pending message twice.
+		gateCmd := m.opts.ExplainBackGate(text, recentTranscript(m.history[:len(m.history)-1], 8))
+		return m, tea.Batch(userCmd, gateCmd)
+	}
 	m, startCmd := m.startStream()
 	return m, tea.Batch(userCmd, startCmd)
 }
@@ -1083,6 +1117,31 @@ func (m *Model) SetWidth(w int) {
 	}
 	m.input.SetWidth(inputInnerWidth)
 	m.mdRenderer = newMarkdownRenderer(m.contentWidth() - 8)
+}
+
+// recentTranscript renders up to the last maxTurns user/tutor turns as
+// plain text for the explain-back gate. System/context turns are
+// skipped (same exclusion buildBackendMessages applies). The caller
+// passes history WITHOUT the just-published pending user turn (that
+// turn is supplied separately as the gate's pendingTurn argument), so
+// it is not duplicated in the gate input.
+func recentTranscript(history []Turn, maxTurns int) string {
+	var picked []Turn
+	for i := len(history) - 1; i >= 0 && len(picked) < maxTurns; i-- {
+		switch history[i].Role {
+		case RoleUser, RoleTutor:
+			picked = append([]Turn{history[i]}, picked...)
+		}
+	}
+	var b strings.Builder
+	for _, t := range picked {
+		who := "Learner"
+		if t.Role == RoleTutor {
+			who = "Tutor"
+		}
+		fmt.Fprintf(&b, "%s: %s\n", who, t.Content)
+	}
+	return b.String()
 }
 
 // buildBackendMessages converts the local history into the backend's

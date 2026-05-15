@@ -144,6 +144,13 @@ type Competency struct {
 	Layer               Layer    `yaml:"layer"`
 	ObservableBehaviors []string `yaml:"observable_behaviors"`
 	ForgeRationale      string   `yaml:"forge_rationale"`
+
+	// Per-competency gate thresholds (PRD §4.7). Pointers so an
+	// absent key is distinguishable from an authored 0. nil ⇒ the
+	// competency package applies the defaults (3 / 2 / 2).
+	MinDemonstrations *int `yaml:"min_demonstrations,omitempty"`
+	MinChapters       *int `yaml:"min_chapters,omitempty"`
+	MinPracticeMode   *int `yaml:"min_practice_mode,omitempty"`
 }
 
 // Chapter mirrors a chapters/<id>.yaml file. Path is set by the loader

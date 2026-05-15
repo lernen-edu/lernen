@@ -37,7 +37,9 @@ func DefaultState(curriculumID, firstChapterID string) *State {
 
 // Load reads progress/<curriculumID>/state.yaml under progressRoot.
 // Returns (nil, nil) when the file is absent; (nil, err) on malformed
-// YAML or other read failure.
+// YAML or other read failure. If the on-disk state is an older schema
+// version it is migrated in memory; a newer-than-binary version is a
+// hard error.
 func Load(progressRoot, curriculumID string) (*State, error) {
 	path := Path(progressRoot, curriculumID)
 	data, err := os.ReadFile(path)
@@ -51,7 +53,37 @@ func Load(progressRoot, curriculumID string) (*State, error) {
 	if err := yaml.Unmarshal(data, &out); err != nil {
 		return nil, fmt.Errorf("progress: parse %s: %w", path, err)
 	}
+	if err := migrateState(&out); err != nil {
+		return nil, fmt.Errorf("progress: %s: %w", path, err)
+	}
 	return &out, nil
+}
+
+// migrateState upgrades an in-memory State loaded from disk to
+// CurrentSchemaVersion. v0/v1 → v2: stamp every existing demonstration
+// Outcome = demonstrated_clean (the v1 structurer only ever emitted
+// evidenced demonstrations, so this neither loses data nor over-claims).
+// A version newer than this binary is a fail-closed error — never a
+// silent downgrade or reset.
+func migrateState(s *State) error {
+	switch {
+	case s.SchemaVersion > CurrentSchemaVersion:
+		return fmt.Errorf("state.yaml was written by a newer Lernen (schema v%d); upgrade Lernen or move the file aside", s.SchemaVersion)
+	case s.SchemaVersion == 0 || s.SchemaVersion == 1:
+		for i := range s.CompletedChapters {
+			for j := range s.CompletedChapters[i].Demonstrations {
+				d := &s.CompletedChapters[i].Demonstrations[j]
+				if d.Outcome == "" {
+					d.Outcome = OutcomeDemonstratedClean
+				}
+			}
+		}
+		s.SchemaVersion = CurrentSchemaVersion
+		return nil
+	default:
+		// 2..CurrentSchemaVersion: nothing to do.
+		return nil
+	}
 }
 
 // Save validates and atomically writes the state to disk. On a

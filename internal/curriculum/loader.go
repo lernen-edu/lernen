@@ -205,6 +205,18 @@ func (c *Curriculum) indexAndValidate() error {
 		if _, exists := c.competencyByID[comp.ID]; exists {
 			return fmt.Errorf("curriculum: duplicate competency id %q in competencies.yaml", comp.ID)
 		}
+		for _, tv := range []struct {
+			name string
+			p    *int
+		}{
+			{"min_demonstrations", comp.MinDemonstrations},
+			{"min_chapters", comp.MinChapters},
+			{"min_practice_mode", comp.MinPracticeMode},
+		} {
+			if tv.p != nil && *tv.p < 0 {
+				return fmt.Errorf("curriculum: competency %q has negative %s (%d); must be >= 0", comp.ID, tv.name, *tv.p)
+			}
+		}
 		c.competencyByID[comp.ID] = comp
 	}
 

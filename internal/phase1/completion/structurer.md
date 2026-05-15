@@ -14,6 +14,7 @@ mentor_summary: |
 demonstrations:
   - competency_id: <id from input>
     tier_demonstrated: <foundation | fluency | mastery — matches the competency's authored tier>
+    outcome: <demonstrated_clean | demonstrated_with_hint — see rule below>
     evidence: |
       <one or two sentences citing the specific dialogue or exercise
        attempt that demonstrated this competency, e.g. "When you traced
@@ -48,6 +49,7 @@ explain_back: |
 - mentor_summary must cite concrete moments, not generic praise. The summary is for the user's own progress log, not flattery.
 - Do not reproduce source content (chapter text, exercise solutions, paragraphs from the book).
 - Do not include code blocks of 4+ lines in any field (Phase 1 firewall applies).
+- outcome MUST be `demonstrated_clean` (the user demonstrated the competency unaided) or `demonstrated_with_hint` (they got there but needed a tutor nudge). Never emit `failed` or `not_attempted` here — those competencies are simply OMITTED from the list, exactly as today. Only `demonstrated_clean` counts toward gate readiness, so do not inflate.
 
 # Output
 

@@ -18,11 +18,13 @@ import (
 	"github.com/lernen-edu/lernen/internal/backends/google"
 	"github.com/lernen-edu/lernen/internal/backends/openai"
 	"github.com/lernen-edu/lernen/internal/backends/openrouter"
+	"github.com/lernen-edu/lernen/internal/competency"
 	"github.com/lernen-edu/lernen/internal/config"
 	"github.com/lernen-edu/lernen/internal/curriculum"
 	"github.com/lernen-edu/lernen/internal/languages"
 	"github.com/lernen-edu/lernen/internal/phase1"
 	"github.com/lernen-edu/lernen/internal/phase1/completion"
+	"github.com/lernen-edu/lernen/internal/phase1/explainback"
 	"github.com/lernen-edu/lernen/internal/progress"
 	"github.com/lernen-edu/lernen/internal/tui"
 )
@@ -69,6 +71,7 @@ func ProductionWorkDeps() WorkDeps {
 func NewWorkCmd(deps WorkDeps) *cobra.Command {
 	var manifestDir string
 	var chapterFlag string
+	var trainingWheelsOff bool
 	cmd := &cobra.Command{
 		Use:   "work <curriculum-id>",
 		Short: "Start a Phase 1 work session for the given curriculum.",
@@ -87,15 +90,22 @@ Chapter navigation:
                    number, or the words prev / next. Does not record
                    demonstration.
   /progress        show current progress across all chapters.
+  /competency      show per-competency demonstration progress and
+                   gate-readiness (read-only; no AI call).
 
 Use --chapter=<id-or-number-or-prev-or-next> to open at a specific
-chapter for one session (does not persist).`,
+chapter for one session (does not persist).
+
+The explain-back gate asks you to say what you tried before the tutor
+engages on a stuck-on-a-problem turn. Disable it with
+--training-wheels-off (documented, not encouraged).`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runWork(cmd.Context(), workArgs{
-				CurriculumID: args[0],
-				ManifestDir:  manifestDir,
-				Chapter:      chapterFlag,
+				CurriculumID:      args[0],
+				ManifestDir:       manifestDir,
+				Chapter:           chapterFlag,
+				TrainingWheelsOff: trainingWheelsOff,
 			}, deps)
 		},
 	}
@@ -103,6 +113,8 @@ chapter for one session (does not persist).`,
 		"Override manifests directory (default: XDG-resolved $DataDir/manifests)")
 	cmd.Flags().StringVar(&chapterFlag, "chapter", "",
 		"Open at a specific chapter id, 1-indexed number, or prev/next (overrides resumed state; does not persist)")
+	cmd.Flags().BoolVar(&trainingWheelsOff, "training-wheels-off", false,
+		"Disable the explain-back gate (documented escape hatch; not encouraged)")
 	// main() prints the returned error; suppress cobra's duplicate.
 	cmd.SilenceUsage = true
 	cmd.SilenceErrors = true
@@ -110,9 +122,10 @@ chapter for one session (does not persist).`,
 }
 
 type workArgs struct {
-	CurriculumID string
-	ManifestDir  string
-	Chapter      string
+	CurriculumID      string
+	ManifestDir       string
+	Chapter           string
+	TrainingWheelsOff bool
 }
 
 // runWork performs the resolution chain. Each step's error is wrapped
@@ -214,6 +227,10 @@ func runWork(ctx context.Context, args workArgs, deps WorkDeps) error {
 		return fmt.Errorf("work: backend health check failed (%s): %w", backend.Name(), err)
 	}
 
+	if args.TrainingWheelsOff {
+		fmt.Fprintln(os.Stderr, "warning: --training-wheels-off — the explain-back gate is disabled for this session.")
+	}
+
 	// Orchestrator loop. One iteration = one TUI session = one chapter.
 	// /chapter returns tea.QuitMsg via the handler closure; the loop reads
 	// the closure vars, saves state, and re-enters with a fresh TUI on the
@@ -247,6 +264,11 @@ func runWork(ctx context.Context, args workArgs, deps WorkDeps) error {
 
 		progressHandler := func(m tui.Model, _ string) (tui.Model, tea.Cmd) {
 			m, cmd := m.AppendSystemTurn(renderProgressTable(state, curr))
+			return m, cmd
+		}
+
+		competencyHandler := func(m tui.Model, _ string) (tui.Model, tea.Cmd) {
+			m, cmd := m.AppendSystemTurn(competency.Render(state, curr))
 			return m, cmd
 		}
 
@@ -302,15 +324,34 @@ func runWork(ctx context.Context, args workArgs, deps WorkDeps) error {
 			DispatchCtx:  ctx,
 			IntroMessage: "Ask the tutor anything about this chapter — explain a concept, walk through code, or paste an attempt for feedback. /help for commands.",
 			SlashHandlers: map[string]tui.SlashHandler{
-				"chapter":  chapterHandler,
-				"next":     nextHandler,
-				"progress": progressHandler,
+				"chapter":    chapterHandler,
+				"next":       nextHandler,
+				"progress":   progressHandler,
+				"competency": competencyHandler,
 			},
 			SlashHandlerHelp: map[string]string{
-				"chapter":  "Jump to a chapter by id, 1-indexed number, or prev/next (does not record demonstration)",
-				"next":     "Advance to the next chapter (the mentor's structurer summarizes; /next force overrides missing-competency gating)",
-				"progress": "Show progress against this curriculum (completed / current / pending)",
+				"chapter":    "Jump to a chapter by id, 1-indexed number, or prev/next (does not record demonstration)",
+				"next":       "Advance to the next chapter (the mentor's structurer summarizes; /next force overrides missing-competency gating)",
+				"progress":   "Show progress against this curriculum (completed / current / pending)",
+				"competency": "Show per-competency demonstration progress and gate-readiness (read-only)",
 			},
+		}
+		if !args.TrainingWheelsOff {
+			tuiOpts.ExplainBackGate = func(pending, transcript string) tea.Cmd {
+				return func() tea.Msg {
+					d, err := explainback.Evaluate(ctx, backend, pending, transcript)
+					if err != nil {
+						// Fail open toward learning: a broken gate must
+						// never block the learner.
+						fmt.Fprintf(os.Stderr, "explain-back gate error (engaging tutor anyway): %v\n", err)
+						return tui.GatePassMsg{}
+					}
+					if d.Gated() {
+						return tui.GateHoldMsg{Followup: d.Followup}
+					}
+					return tui.GatePassMsg{}
+				}
+			}
 		}
 		if err := deps.SessionRunner(tuiOpts); err != nil {
 			return err

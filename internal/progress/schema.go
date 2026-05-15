@@ -17,8 +17,27 @@ import (
 )
 
 // CurrentSchemaVersion is the version Save writes and Load expects.
-// Bump only when the on-disk shape changes incompatibly.
-const CurrentSchemaVersion = 1
+// Bump only when the on-disk shape changes incompatibly. v2 added
+// CompetencyDemonstration.Outcome (and the reserved PracticeMode).
+const CurrentSchemaVersion = 2
+
+// Outcome vocabulary for CompetencyDemonstration.Outcome (PRD §4.7).
+const (
+	OutcomeDemonstratedClean    = "demonstrated_clean"
+	OutcomeDemonstratedWithHint = "demonstrated_with_hint"
+	OutcomeFailed               = "failed"
+	OutcomeNotAttempted         = "not_attempted"
+)
+
+// ValidOutcome reports whether s is one of the four outcome values.
+func ValidOutcome(s string) bool {
+	switch s {
+	case OutcomeDemonstratedClean, OutcomeDemonstratedWithHint, OutcomeFailed, OutcomeNotAttempted:
+		return true
+	default:
+		return false
+	}
+}
 
 // State is the persisted shape of progress/<curriculum-id>/state.yaml.
 type State struct {
@@ -47,6 +66,11 @@ type CompetencyDemonstration struct {
 	CompetencyID     string `yaml:"competency_id"`
 	TierDemonstrated string `yaml:"tier_demonstrated"`
 	Evidence         string `yaml:"evidence"`
+	Outcome          string `yaml:"outcome"`
+	// PracticeMode is reserved for the practice-mode chunk. Nothing
+	// sets it true yet; the tracker reads it. Kept omitempty so v2
+	// files written this chunk stay visually clean.
+	PracticeMode bool `yaml:"practice_mode,omitempty"`
 }
 
 // Validate enforces the per-record rules independent of a State (used
@@ -77,6 +101,9 @@ func (c *ChapterCompletion) Validate(allowMissingDemos bool) error {
 			}
 			if strings.TrimSpace(d.Evidence) == "" {
 				return fmt.Errorf("progress: ChapterCompletion: demonstrations[%d].evidence empty", i)
+			}
+			if !ValidOutcome(d.Outcome) {
+				return fmt.Errorf("progress: ChapterCompletion: demonstrations[%d].outcome %q invalid; want demonstrated_clean|demonstrated_with_hint|failed|not_attempted", i, d.Outcome)
 			}
 		}
 	case "orientation":
@@ -125,6 +152,9 @@ func (s *State) Validate() error {
 				}
 				if strings.TrimSpace(d.Evidence) == "" {
 					return fmt.Errorf("progress: completed_chapters[%d].demonstrations[%d].evidence must be non-empty", i, j)
+				}
+				if !ValidOutcome(d.Outcome) {
+					return fmt.Errorf("progress: completed_chapters[%d].demonstrations[%d].outcome %q invalid", i, j, d.Outcome)
 				}
 			}
 		case "orientation":
