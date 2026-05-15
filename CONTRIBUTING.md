@@ -60,7 +60,7 @@ This is selective. The bar is "demonstrated thoughtful engagement with the proje
 
 If you do open a PR:
 
-- Go 1.22+
+- Go 1.25+
 - Format with `gofmt` and `goimports`
 - Lint with `golangci-lint` using the project's `.golangci.yml`
 - Public types and functions need doc comments

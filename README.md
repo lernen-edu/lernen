@@ -116,7 +116,7 @@ Verify the checksum against `checksums.txt` before running. Extract, move `lerne
 
 ### From source
 
-Requires Go 1.22+:
+Requires Go 1.25+:
 
 ```sh
 go install github.com/lernen-edu/lernen/cmd/lernen@latest
