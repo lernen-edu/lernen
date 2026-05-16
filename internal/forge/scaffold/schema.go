@@ -127,13 +127,19 @@ type SourceRef struct {
 	Note    string `yaml:"note,omitempty"`
 }
 
-// Exercise is one exercise stub. Skeleton scope: prompt + competencies +
-// forge_rationale only. Test scaffolding deferred to M3e.x.
+// Exercise is one exercise stub. Fields are prompt, competencies,
+// forge_rationale, and (optionally) test_scaffold. test_scaffold is
+// populated by M4c; conceptual exercises may legitimately leave it empty.
 type Exercise struct {
 	ID             string   `yaml:"id"`
 	Prompt         string   `yaml:"prompt"`
 	Competencies   []string `yaml:"competencies"`
 	ForgeRationale string   `yaml:"forge_rationale"`
+	// TestScaffold is a runnable pytest module (M4c). Empty for
+	// conceptual exercises (legitimately not practiceable). When
+	// present it must obey the solution/test naming contract
+	// (imports the `solution` module; defines test_* functions).
+	TestScaffold string `yaml:"test_scaffold,omitempty"`
 }
 
 // SocraticTemplates holds the per-chapter Socratic prompts. Skeleton floor
@@ -220,6 +226,9 @@ func (e *Exercise) Validate() error {
 	}
 	if strings.TrimSpace(e.ForgeRationale) == "" {
 		return fmt.Errorf("forge_rationale must be non-empty")
+	}
+	if e.TestScaffold != "" && strings.TrimSpace(e.TestScaffold) == "" {
+		return fmt.Errorf("test_scaffold must be non-whitespace when present")
 	}
 	return nil
 }

@@ -43,6 +43,10 @@ scaffold:
         <prompt text from the dialogue>
       competencies:
         - <competency id>
+      test_scaffold: |
+        from solution import <names>
+        def test_<behavior>():
+            assert ...
       forge_rationale: |
         <why this exercise>
   socratic_templates:
@@ -67,6 +71,8 @@ Rules:
 - All `layer` values MUST be `manifest-specific` in M3e.
 - `tier` MUST be one of `foundation`, `fluency`, `mastery`.
 - If no NEW competencies were defined in this chapter's dialogue (the user reused an existing one only), set `new_competencies: []`.
+- For a content exercise that asks the learner to write runnable code, author `test_scaffold` as a minimal but real pytest module that (a) imports the learner's code as the `solution` module (`from solution import ...` / `import solution`), and (b) defines one or more `test_*` functions asserting the exercise's required behavior. The scaffold MUST NOT contain the solution itself — only the tests.
+- If the exercise is conceptual or has no machine-checkable behavior, set `test_scaffold: ""` (such exercises are simply not practiceable; that is acceptable, do not invent a fake test).
 {{end}}
 
 ## Output rules

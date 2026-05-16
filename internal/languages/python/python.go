@@ -39,9 +39,9 @@ func (a *Adapter) ID() string { return "python" }
 // DisplayName returns "Python".
 func (a *Adapter) DisplayName() string { return "Python" }
 
-// ToolchainCheck looks for python3 on PATH. The M3 implementation will also
-// verify pip, pytest, pytest-json-report, and ruff, plus probe minimum
-// versions; for M1, having the interpreter is enough to drive `lernen work`.
+// ToolchainCheck looks for python3 on PATH (required for `lernen work`) and
+// also probes for pytest and pytest-json-report (non-Required; needed for
+// `lernen practice` but must not gate `lernen work`).
 func (a *Adapter) ToolchainCheck(_ context.Context) languages.ToolchainStatus {
 	tool := languages.ToolStatus{
 		Name:     "python3",
@@ -57,15 +57,35 @@ func (a *Adapter) ToolchainCheck(_ context.Context) languages.ToolchainStatus {
 		tool.Err = err
 	}
 
+	pytest := languages.ToolStatus{Name: "pytest", Required: false}
+	jsonReport := languages.ToolStatus{Name: "pytest-json-report", Required: false}
+	if tool.Available {
+		if perr := exec.Command(path, "-c", "import pytest").Run(); perr == nil {
+			pytest.Available = true
+		} else {
+			pytest.Hint = "Needed for `lernen practice`: pip install pytest"
+			pytest.Err = perr
+		}
+		if rerr := exec.Command(path, "-c", "import pytest_jsonreport").Run(); rerr == nil {
+			jsonReport.Available = true
+		} else {
+			jsonReport.Hint = "Needed for `lernen practice`: pip install pytest-json-report"
+			jsonReport.Err = rerr
+		}
+	} else {
+		pytest.Hint = "Install python3 first, then: pip install pytest"
+		jsonReport.Hint = "Install python3 first, then: pip install pytest-json-report"
+	}
+
 	return languages.ToolchainStatus{
-		OK:    tool.Available,
-		Tools: []languages.ToolStatus{tool},
+		OK:    tool.Available, // python3 only — `lernen work` must not gate on pytest
+		Tools: []languages.ToolStatus{tool, pytest, jsonReport},
 	}
 }
 
-// TestRunner returns the M1 stub; the real pytest-driven runner lands in M3.
+// TestRunner returns the real pytest-driven runner (M4c).
 func (a *Adapter) TestRunner() languages.TestRunner {
-	return languages.UnimplementedTestRunner{LanguageID: "python"}
+	return pytestRunner{}
 }
 
 // BuildRunner returns the M1 stub. Python has no build step; M3 may use

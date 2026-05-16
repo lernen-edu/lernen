@@ -348,6 +348,7 @@ func RunPass2(ctx context.Context, opts Pass2Options) error {
 			return tui.ContextMsg{
 				Text:      Pass2ChapterAnnouncement(nextIdx, nextCl.ChapterID, nextTitle, nextCl.Kind),
 				AutoReply: true,
+				Silent:    true,
 			}
 		}
 		return m, tea.Batch(userCmd, sysCmd, cmd)
@@ -403,6 +404,7 @@ func RunPass2(ctx context.Context, opts Pass2Options) error {
 			return tui.ContextMsg{
 				Text:      Pass2ChapterAnnouncement(nextIdx, nextCl.ChapterID, nextTitle, nextCl.Kind),
 				AutoReply: true,
+				Silent:    true,
 			}
 		}
 		return m, tea.Batch(skipUserCmd, skipSysCmd, cmd)

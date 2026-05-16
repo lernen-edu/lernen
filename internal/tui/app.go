@@ -301,9 +301,22 @@ type SystemMsg struct{ Text string }
 // /next handler announcing the next chapter. Default false matches
 // historical behavior (the user looks at the context and prompts the
 // mentor themselves).
+//
+// Silent, when true, splits the visibility contract: the turn still
+// enters model history (the model sees the content / steering, and an
+// AutoReply still fires) but it is NOT rendered to the user's
+// scrollback — so "renders under the 'system' label" above does not
+// apply. Use for model-only steering (e.g. inter-chapter transition
+// prompt-engineering) the learner should not see. See the Silent field.
 type ContextMsg struct {
 	Text      string
 	AutoReply bool
+	// Silent, when true, injects Text into model history (so the
+	// model still receives the steering on an AutoReply) but does
+	// NOT publish it to the visible transcript. Used for inter-
+	// chapter transition steering that is prompt-engineering for
+	// the model, not content for the learner.
+	Silent bool
 }
 
 // QuitWithMessage is a tea.Msg that appends Text as a system turn,
@@ -615,6 +628,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case ContextMsg:
+		if msg.Silent {
+			// Append to history so startStream includes the steering turn in
+			// the backend request — the model still gets it. Do NOT publish
+			// to the visible transcript (no Printer.Println).
+			m.history = append(m.history, Turn{Role: RoleContext, Content: msg.Text})
+			if msg.AutoReply {
+				// Don't pre-clear m.waiting; startStream sets it for
+				// the auto dispatch (mirrors the non-Silent path below).
+				m, startCmd := m.startStream()
+				return m, startCmd
+			}
+			m.waiting = false
+			return m, func() tea.Msg { return nil }
+		}
 		m, ctxCmd := m.publishTurn(Turn{Role: RoleContext, Content: msg.Text})
 		if msg.AutoReply {
 			// Don't clear m.waiting; startStream will set it for the auto dispatch.

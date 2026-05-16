@@ -32,6 +32,8 @@ func Execute() error {
 	rootCmd.AddCommand(NewForgeCmd(ProductionForgeDeps()))
 	rootCmd.AddCommand(NewDocsCmd(ProductionDocsDeps()))
 	rootCmd.AddCommand(NewSetupCmd(ProductionSetupDeps()))
+	rootCmd.AddCommand(NewPracticeCmd(ProductionPracticeDeps()))
+	rootCmd.AddCommand(NewStatusCmd(ProductionStatusDeps()))
 	return rootCmd.Execute()
 }
 

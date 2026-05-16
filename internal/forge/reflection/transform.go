@@ -47,7 +47,7 @@ func transformChapter(s scaffold.ChapterScaffold) curriculum.Chapter {
 			ID:             ex.ID,
 			Prompt:         ex.Prompt,
 			Competencies:   ex.Competencies,
-			TestScaffold:   "",
+			TestScaffold:   ex.TestScaffold,
 			ForgeRationale: ex.ForgeRationale,
 		})
 	}

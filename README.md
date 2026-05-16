@@ -24,7 +24,7 @@ everything that has shipped through that tag — no more, no less. The
 PRD (`docs/PRD.md`) describes the full system; this section tells you
 what is **actually working today**.
 
-### Shipped (through v0.3.0)
+### Shipped (through v0.3.1)
 
 - **`lernen setup`** — one-time backend configuration. Pick from
   Codex CLI, Gemini CLI, or OpenRouter. Validates the connection and
@@ -85,6 +85,23 @@ what is **actually working today**.
     or mode toggles. Matches Claude Code / Codex CLI / Gemini CLI
     conventions.
 
+- **`lernen practice <curriculum-id>`** *(new in v0.3.1)* — AI-off
+  practice mode. No tutor: Lernen picks an under-practiced, test-ready
+  exercise from a chapter you've completed, drops a workdir with the
+  prompt and a pytest scaffold (`solution.py` you edit, plus a
+  verbatim `test_exercise.py`), and grades your `/submit` by running
+  the real test suite. A clean pass records a practice demonstration
+  toward gate-readiness; a failing run is honest history with no
+  credit; a broken toolchain records nothing and the session stays
+  open to retry. `/docs <lib>` and `/repl` are available; there is no
+  model in the loop. Pytest + pytest-json-report are pre-flighted
+  before the session starts.
+
+- **`lernen status <curriculum-id>`** *(new in v0.3.1)* — the
+  out-of-session twin of `/competency`: prints the foundation-first
+  competency table, the gate-readiness summary, and the chapter
+  progress table. Pure derivation, no AI, read-only.
+
 - **TUI slash commands.** `/help`, `/copy`, `/quit`, `/competency`,
   plus the chapter navigation commands above. Ctrl+L clears the
   visible screen
@@ -92,8 +109,9 @@ what is **actually working today**.
 
 ### Not yet shipped (planned)
 
-- **Phase 1 polish.** AI-off practice mode (`lernen practice`),
-  spaced-repetition / weak-area drilling.
+- **Phase 1 polish.** Smarter practice selection — spaced-repetition /
+  difficulty-ramp weak-area drilling (v0.3.1 ships the naive
+  under-practiced weighting; `lernen practice` itself is shipped).
 - **`lernen gate`** — the build / comprehension / debugging exam
   between Phase 1 and Phase 2.
 - **`lernen review` / `lernen exercise`** — Phase 2 commands for
@@ -161,6 +179,10 @@ lernen forge
 # 3. Phase 1 tutoring: chapter nav + explain-back gate [v0.3.0: shipped]
 lernen work <curriculum-id>
 
+# 3b. AI-off practice + out-of-session progress view   [v0.3.1: shipped]
+lernen practice <curriculum-id>
+lernen status <curriculum-id>
+
 # 4. Capability gate between Phase 1 and Phase 2       [planned]
 lernen gate
 
@@ -168,9 +190,9 @@ lernen gate
 lernen review
 ```
 
-Steps 1–3 produce a working forge-author-and-tutor loop in v0.3.0;
-steps 4–5 are pending. See [Current status](#current-status) above
-for the full breakdown.
+Steps 1–3b produce a working forge-author, tutor, and AI-off practice
+loop through v0.3.1; steps 4–5 are pending. See
+[Current status](#current-status) above for the full breakdown.
 
 See `docs/PRD.md` for the full architecture and pedagogical philosophy.
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"github.com/lernen-edu/lernen/internal/config"
 	"github.com/lernen-edu/lernen/internal/curriculum"
 	"github.com/lernen-edu/lernen/internal/languages"
+	logpkg "github.com/lernen-edu/lernen/internal/log"
 	"github.com/lernen-edu/lernen/internal/phase1"
 	"github.com/lernen-edu/lernen/internal/phase1/completion"
 	"github.com/lernen-edu/lernen/internal/phase1/explainback"
@@ -343,7 +345,7 @@ func runWork(ctx context.Context, args workArgs, deps WorkDeps) error {
 					if err != nil {
 						// Fail open toward learning: a broken gate must
 						// never block the learner.
-						fmt.Fprintf(os.Stderr, "explain-back gate error (engaging tutor anyway): %v\n", err)
+						fmt.Fprintf(redactedStderr(os.Stderr), "explain-back gate error (engaging tutor anyway): %v\n", err)
 						return tui.GatePassMsg{}
 					}
 					if d.Gated() {
@@ -547,4 +549,11 @@ func productionSessionRunner(opts tui.Options) error {
 	p := tea.NewProgram(tui.New(opts))
 	_, err := p.Run()
 	return err
+}
+
+// redactedStderr wraps w with the process secret redactor so no API
+// key / token reaches a log line or error string (BUILD_ORDER
+// Security (c)). Used at the secret-adjacent stderr sinks.
+func redactedStderr(w io.Writer) io.Writer {
+	return logpkg.NewRedactor().Writer(w)
 }
