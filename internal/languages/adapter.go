@@ -45,6 +45,11 @@ type LanguageAdapter interface {
 	// Stub adapters in M1 return UnimplementedBuildRunner.
 	BuildRunner() BuildRunner
 
+	// GateFixtures returns this language's embedded capability-gate
+	// fixture bank (M5a). It is loaded/validated at call time so a
+	// malformed bank surfaces as an error, never a panic.
+	GateFixtures() (GateFixtures, error)
+
 	// REPLCommand returns the interactive REPL the adapter recommends
 	// (e.g. "python3"). available is false when the REPL is not on PATH.
 	REPLCommand() (cmd string, available bool)

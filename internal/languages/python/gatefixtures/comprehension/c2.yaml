@@ -1,0 +1,29 @@
+id: c2
+language: python
+snippet: |
+  def unique_everseen(iterable):
+      "Yield unique elements, preserving order. Remember all elements ever seen."
+      seen = []
+      for element in iterable:
+          if element not in seen:
+              seen.append(element)
+              yield element
+
+
+  print(list(unique_everseen("AAAABBBCCDAABBB")))
+expected_output: |-
+  ['A', 'B', 'C', 'D']
+expected_issues:
+  - description: "`seen` is a list, so the membership test `element not in seen`
+      is O(k) in the number of distinct elements and the whole function is
+      O(n*k) (quadratic when most elements are distinct). The canonical
+      itertools recipe uses a set for O(1) membership and overall O(n); this
+      adaptation degrades that to a list."
+  - description: "No key= parameter: the canonical itertools unique_everseen(iterable,
+      key=None) lets callers dedupe by a derived value (e.g. case-insensitively
+      or by an attribute); this version drops key= entirely, so it can only
+      dedupe by whole-element equality and offers no projection."
+source:
+  project: CPython (itertools recipes)
+  license: PSF
+  url: https://docs.python.org/3/library/itertools.html

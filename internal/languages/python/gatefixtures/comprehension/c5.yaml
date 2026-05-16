@@ -1,0 +1,28 @@
+id: c5
+language: python
+snippet: |
+  def tally(words, counts={}):
+      "Count occurrences of each word, accumulating into `counts`."
+      for w in words:
+          counts[w] = counts.get(w, 0) + 1
+      return counts
+
+
+  first = tally(["a", "b", "a"])
+  second = tally(["c"])
+  print(sorted(first.items()), sorted(second.items()))
+expected_output: |-
+  [('a', 2), ('b', 1), ('c', 1)] [('a', 2), ('b', 1), ('c', 1)]
+expected_issues:
+  - description: "`counts={}` is a mutable default argument evaluated once at
+      function-definition time and shared across every call that does not pass
+      `counts` explicitly. The second call's tally is added to the SAME dict,
+      so `second` still contains the first call's counts ('a' and 'b' leak in)
+      and `first` and `second` are in fact the same object."
+  - description: "Because `first` and `second` alias the one shared default
+      dict, mutating either result later also corrupts the other and every
+      future default-argument call."
+source:
+  project: Python Programming FAQ (mutable default arguments)
+  license: PSF
+  url: https://docs.python.org/3/faq/programming.html#why-are-default-values-shared-between-objects

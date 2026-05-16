@@ -1,0 +1,36 @@
+id: d1
+tier: 1
+broken_program: |
+  def running_max(nums):
+      """Return a list where element i is the max of nums[0..i]."""
+      if not nums:
+          return []
+      best = nums[0]
+      out = []
+      for n in nums:
+          if n < best:
+              best = n
+          out.append(best)
+      return out
+test_scaffold: |
+  from solution import running_max
+
+
+  def test_increasing():
+      assert running_max([1, 2, 3]) == [1, 2, 3]
+
+
+  def test_with_dip():
+      assert running_max([3, 1, 4, 1, 5]) == [3, 3, 4, 4, 5]
+
+
+  def test_single():
+      assert running_max([7]) == [7]
+
+
+  def test_empty():
+      assert running_max([]) == []
+
+
+  def test_all_equal():
+      assert running_max([2, 2, 2]) == [2, 2, 2]

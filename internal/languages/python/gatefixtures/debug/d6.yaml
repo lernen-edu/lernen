@@ -1,0 +1,46 @@
+id: d6
+tier: 3
+broken_program: |
+  def dedupe_adjacent(items):
+      """Collapse runs of equal adjacent elements to a single element.
+
+      Mutates and returns the same list object that was passed in.
+      Example: [1, 1, 2, 2, 2, 3, 1] -> [1, 2, 3, 1]
+      """
+      i = 1
+      while i < len(items):
+          if items[i] == items[i - 1]:
+              del items[i]
+              i += 1
+          else:
+              i += 1
+      return items
+test_scaffold: |
+  from solution import dedupe_adjacent
+
+
+  def test_pairs_only():
+      assert dedupe_adjacent([1, 1, 2, 2, 3, 3]) == [1, 2, 3]
+
+
+  def test_long_run():
+      assert dedupe_adjacent([1, 1, 1, 1]) == [1]
+
+
+  def test_mixed_runs():
+      assert dedupe_adjacent([1, 1, 2, 2, 2, 3, 1]) == [1, 2, 3, 1]
+
+
+  def test_no_duplicates():
+      assert dedupe_adjacent([1, 2, 3]) == [1, 2, 3]
+
+
+  def test_mutates_in_place():
+      data = [4, 4, 5]
+      result = dedupe_adjacent(data)
+      assert result is data
+      assert data == [4, 5]
+
+
+  def test_empty():
+      assert dedupe_adjacent([]) == []

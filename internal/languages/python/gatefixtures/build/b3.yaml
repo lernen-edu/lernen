@@ -1,0 +1,102 @@
+id: b3
+prompt: |
+  Implement a single-product vending machine as a stateful object.
+
+  Define a class:
+
+      class VendingMachine:
+          def __init__(self, price: int): ...
+
+  `price` is the cost of the one product, expressed in integer cents.
+  If `price` is not strictly positive (<= 0), __init__ must raise
+  ValueError.
+
+  Required public API and behavior:
+
+  - insert(amount: int) -> None
+      Add `amount` cents to the current balance. If `amount` is not
+      strictly positive (<= 0), raise ValueError and do not change
+      the balance.
+  - balance -> int   (read-only property)
+      The amount of money currently held, not yet spent.
+  - dispensed_count -> int   (read-only property)
+      How many products have been successfully dispensed so far over
+      the machine's lifetime.
+  - vend() -> int | None
+      If the current balance is less than `price`, dispense nothing,
+      leave the balance unchanged, and return None.
+      Otherwise dispense one product: reset the balance to 0, return
+      the change owed (balance - price, which is 0 on exact payment),
+      and increment dispensed_count by exactly one.
+  - refund() -> int
+      Return the entire current balance to the customer: reset the
+      balance to 0 and return the amount that was held (0 if empty).
+      A refund must not change dispensed_count.
+
+  State rules: money is only consumed by a successful vend(); each
+  successful vend() resets the balance and counts exactly once; a
+  subsequent vend() requires fresh money.
+test_scaffold: |
+  import pytest
+
+  from solution import VendingMachine
+
+
+  def test_vend_without_enough_money_returns_none():
+      vm = VendingMachine(price=75)
+      vm.insert(50)
+      assert vm.vend() is None
+      assert vm.balance == 50
+      assert vm.dispensed_count == 0
+
+
+  def test_exact_payment_dispenses_no_change():
+      vm = VendingMachine(price=75)
+      vm.insert(25)
+      vm.insert(50)
+      assert vm.vend() == 0
+      assert vm.balance == 0
+      assert vm.dispensed_count == 1
+
+
+  def test_overpayment_returns_change():
+      vm = VendingMachine(price=75)
+      vm.insert(100)
+      assert vm.vend() == 25
+      assert vm.balance == 0
+
+
+  def test_refund_returns_balance_and_resets():
+      vm = VendingMachine(price=75)
+      vm.insert(40)
+      assert vm.refund() == 40
+      assert vm.balance == 0
+      assert vm.dispensed_count == 0
+
+
+  def test_second_vend_requires_new_money():
+      vm = VendingMachine(price=30)
+      vm.insert(60)
+      assert vm.vend() == 30
+      assert vm.vend() is None
+      assert vm.dispensed_count == 1
+
+
+  def test_multiple_purchases_accumulate_count():
+      vm = VendingMachine(price=10)
+      for _ in range(3):
+          vm.insert(10)
+          assert vm.vend() == 0
+      assert vm.dispensed_count == 3
+
+
+  def test_negative_insert_raises():
+      vm = VendingMachine(price=10)
+      with pytest.raises(ValueError):
+          vm.insert(-5)
+
+
+  def test_invalid_price_raises():
+      with pytest.raises(ValueError):
+          VendingMachine(price=0)
+time_budget: "45m"

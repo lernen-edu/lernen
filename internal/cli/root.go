@@ -34,6 +34,7 @@ func Execute() error {
 	rootCmd.AddCommand(NewSetupCmd(ProductionSetupDeps()))
 	rootCmd.AddCommand(NewPracticeCmd(ProductionPracticeDeps()))
 	rootCmd.AddCommand(NewStatusCmd(ProductionStatusDeps()))
+	rootCmd.AddCommand(NewGateCmd(ProductionGateDeps()))
 	return rootCmd.Execute()
 }
 

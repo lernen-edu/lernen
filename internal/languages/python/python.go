@@ -9,8 +9,8 @@
 package python
 
 import (
-	_ "embed"
 	"context"
+	_ "embed"
 	"os/exec"
 	"strings"
 

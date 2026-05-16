@@ -1,0 +1,89 @@
+id: b1
+prompt: |
+  Implement a reverse-Polish-notation (postfix) integer calculator.
+
+  Define a single function:
+
+      def evaluate(expression: str) -> int
+
+  `expression` is a string of whitespace-separated tokens. A token is
+  either an integer literal (optionally negative, e.g. "-4") or one of
+  the four binary operators "+", "-", "*", "/". The expression is in
+  postfix order: an operator applies to the two most recently seen
+  operands, with the left operand pushed before the right one.
+
+  Evaluation rules:
+
+  - "+", "-", "*" use ordinary integer arithmetic.
+  - "/" is integer floor division (Python's // semantics, e.g.
+    "7 2 /" -> 3).
+  - For a binary operator, the FIRST popped value is the right
+    operand and the SECOND popped value is the left operand, so
+    "10 3 -" evaluates to 7 and "1 0 /" attempts 1 // 0.
+
+  Error handling (raise the listed built-in exception, message text is
+  not checked):
+
+  - Division by zero must raise ZeroDivisionError.
+  - An operator encountered with fewer than two available operands
+    must raise ValueError.
+  - A non-integer, non-operator token must raise ValueError.
+  - An expression that does not reduce to exactly one final value
+    (e.g. leftover operands, or an empty string) must raise
+    ValueError.
+
+  Return the single resulting integer for a well-formed expression.
+test_scaffold: |
+  import pytest
+
+  from solution import evaluate
+
+
+  def test_single_number():
+      assert evaluate("42") == 42
+
+
+  def test_negative_literal():
+      assert evaluate("-4 5 +") == 1
+
+
+  def test_simple_add():
+      assert evaluate("3 4 +") == 7
+
+
+  def test_subtraction_is_ordered():
+      assert evaluate("10 3 -") == 7
+
+
+  def test_nested_expression():
+      assert evaluate("5 1 2 + 4 * + 3 -") == 14
+
+
+  def test_integer_floor_division():
+      assert evaluate("7 2 /") == 3
+
+
+  def test_division_by_zero_raises():
+      with pytest.raises(ZeroDivisionError):
+          evaluate("1 0 /")
+
+
+  def test_too_few_operands_raises():
+      with pytest.raises(ValueError):
+          evaluate("1 +")
+
+
+  def test_trailing_operand_is_malformed():
+      with pytest.raises(ValueError):
+          evaluate("1 2 3 +")
+
+
+  def test_invalid_token_raises():
+      with pytest.raises(ValueError):
+          evaluate("1 x +")
+
+
+  def test_empty_expression_raises():
+      with pytest.raises(ValueError):
+          evaluate("")
+time_budget: "45m"

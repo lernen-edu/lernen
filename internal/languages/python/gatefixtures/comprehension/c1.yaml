@@ -1,0 +1,38 @@
+id: c1
+language: python
+snippet: |
+  from itertools import islice
+
+
+  def take(n, iterable):
+      "Return first n items of the iterable as a list."
+      return list(islice(iterable, n))
+
+
+  def chunk(data, size):
+      "Split data into consecutive lists of length `size`."
+      it = iter(data)
+      out = []
+      while True:
+          piece = take(size, it)
+          if not piece:
+              break
+          out.append(piece)
+      return out
+
+
+  print(chunk([1, 2, 3, 4, 5], 2))
+expected_output: |-
+  [[1, 2], [3, 4], [5]]
+expected_issues:
+  - description: "When len(data) is not an exact multiple of `size`, the final
+      chunk is silently shorter than `size` (here [5]). Callers that assume
+      every chunk has length `size` will misbehave, and there is no parameter
+      or signal to pad, drop, or reject the ragged tail."
+  - description: "`take` performs no validation that fewer than `n` items were
+      actually available, so a too-short final group is indistinguishable from
+      an intentional one."
+source:
+  project: CPython (itertools recipes)
+  license: PSF
+  url: https://docs.python.org/3/library/itertools.html

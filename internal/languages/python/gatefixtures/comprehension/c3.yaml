@@ -1,0 +1,46 @@
+id: c3
+language: python
+snippet: |
+  from collections import OrderedDict
+
+
+  class LRUCache:
+      "Bounded cache that should evict the least recently used key."
+
+      def __init__(self, maxsize=128):
+          self.cache = OrderedDict()
+          self.maxsize = maxsize
+
+      def get(self, key):
+          if key in self.cache:
+              return self.cache[key]
+          return None
+
+      def put(self, key, value):
+          self.cache[key] = value
+          if len(self.cache) > self.maxsize:
+              self.cache.popitem(last=False)
+
+
+  c = LRUCache(maxsize=2)
+  c.put("a", 1)
+  c.put("b", 2)
+  c.get("a")
+  c.put("c", 3)
+  print(c.get("a"), c.get("b"), c.get("c"))
+expected_output: |-
+  None 2 3
+expected_issues:
+  - description: "`get` never calls `self.cache.move_to_end(key)` on a hit, so
+      a read does not mark the key as recently used. Eviction via
+      popitem(last=False) therefore removes the OLDEST-INSERTED key, making
+      this a FIFO cache, not an LRU cache: after get('a') the key 'a' is still
+      evicted (output shows a -> None) even though 'b' was the truly
+      least-recently-used entry."
+  - description: "`put` of an existing key updates the value but likewise does
+      not move it to the most-recent end, so updates also fail to refresh
+      recency."
+source:
+  project: CPython (collections.OrderedDict recipes)
+  license: PSF
+  url: https://docs.python.org/3/library/collections.html

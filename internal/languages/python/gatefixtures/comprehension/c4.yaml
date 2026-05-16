@@ -1,0 +1,32 @@
+id: c4
+language: python
+snippet: |
+  from collections import deque
+  from itertools import islice
+
+
+  def sliding_window(iterable, n):
+      "Collect data into overlapping fixed-length windows."
+      iterator = iter(iterable)
+      window = deque(islice(iterator, n - 1), maxlen=n)
+      for x in iterator:
+          window.append(x)
+          yield tuple(window)
+
+
+  print(list(sliding_window([1, 2], 3)))
+expected_output: |-
+  []
+expected_issues:
+  - description: "When the input has fewer than `n` elements, the priming
+      `islice(iterator, n - 1)` consumes every item, the `for` loop body never
+      runs, and the generator yields nothing at all (empty list). A caller
+      expecting at least one (possibly short) window gets silent emptiness
+      with no error or signal that the input was too small."
+  - description: "`n` is not validated; for n <= 0 the islice(iterator, n - 1)
+      call (negative stop) raises a ValueError deep inside sliding_window rather
+      than rejecting n up front with a clear error."
+source:
+  project: CPython (itertools recipes)
+  license: PSF
+  url: https://docs.python.org/3/library/itertools.html

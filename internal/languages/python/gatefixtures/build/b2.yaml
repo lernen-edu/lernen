@@ -1,0 +1,101 @@
+id: b2
+prompt: |
+  Implement a fixed-capacity ring (circular FIFO) buffer.
+
+  Define a class:
+
+      class RingBuffer:
+          def __init__(self, capacity: int): ...
+
+  `capacity` is the maximum number of items the buffer may hold. If
+  `capacity` is not strictly positive (<= 0), __init__ must raise
+  ValueError.
+
+  Required public API and behavior:
+
+  - push(item) -> None
+      Append `item` to the buffer. If the buffer is already at
+      capacity, the OLDEST item is evicted to make room (the buffer
+      must never hold more than `capacity` items).
+  - pop() -> item
+      Remove and return the OLDEST item (FIFO order). If the buffer
+      is empty, raise IndexError.
+  - __len__() -> int
+      The current number of buffered items.
+  - is_full() -> bool
+      True iff the current size equals capacity.
+  - to_list() -> list
+      A new list of the buffered items in oldest-to-newest order.
+      Mutating the returned list must not affect the buffer.
+
+  Invariant: at all times after any sequence of push/pop operations,
+  len(buffer) <= capacity, and pushing into a full buffer evicts
+  exactly one oldest item per push.
+test_scaffold: |
+  import pytest
+
+  from solution import RingBuffer
+
+
+  def test_push_within_capacity():
+      rb = RingBuffer(3)
+      rb.push(1)
+      rb.push(2)
+      assert rb.to_list() == [1, 2]
+      assert len(rb) == 2
+
+
+  def test_overflow_evicts_oldest():
+      rb = RingBuffer(3)
+      for n in (1, 2, 3, 4):
+          rb.push(n)
+      assert rb.to_list() == [2, 3, 4]
+      assert len(rb) == 3
+
+
+  def test_fifo_pop_order():
+      rb = RingBuffer(2)
+      rb.push("a")
+      rb.push("b")
+      assert rb.pop() == "a"
+      assert rb.pop() == "b"
+
+
+  def test_pop_empty_raises():
+      rb = RingBuffer(2)
+      with pytest.raises(IndexError):
+          rb.pop()
+
+
+  def test_is_full_invariant():
+      rb = RingBuffer(2)
+      assert rb.is_full() is False
+      rb.push(1)
+      assert rb.is_full() is False
+      rb.push(2)
+      assert rb.is_full() is True
+      rb.push(3)
+      assert rb.is_full() is True
+      assert len(rb) == 2
+
+
+  def test_to_list_is_a_copy():
+      rb = RingBuffer(2)
+      rb.push(1)
+      snapshot = rb.to_list()
+      snapshot.append(99)
+      assert rb.to_list() == [1]
+
+
+  def test_invalid_capacity_raises():
+      with pytest.raises(ValueError):
+          RingBuffer(0)
+
+
+  def test_never_exceeds_capacity_invariant():
+      rb = RingBuffer(4)
+      for n in range(100):
+          rb.push(n)
+          assert len(rb) <= 4
+      assert rb.to_list() == [96, 97, 98, 99]
+time_budget: "45m"

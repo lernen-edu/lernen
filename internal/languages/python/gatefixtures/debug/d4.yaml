@@ -1,0 +1,51 @@
+id: d4
+tier: 2
+broken_program: |
+  def is_balanced(s):
+      """Return True if every bracket in s is correctly matched and nested.
+
+      Recognises (), [], and {}. Non-bracket characters are ignored.
+      """
+      pairs = {")": "(", "]": "[", "}": "{"}
+      opening = set(pairs.values())
+      stack = []
+      for ch in s:
+          if ch in opening:
+              stack.append(ch)
+          elif ch in pairs:
+              if not stack:
+                  return False
+              top = stack.pop()
+              if top == pairs[ch]:
+                  return False
+      return not stack
+test_scaffold: |
+  from solution import is_balanced
+
+
+  def test_simple_balanced():
+      assert is_balanced("()") is True
+
+
+  def test_nested_balanced():
+      assert is_balanced("([{}])") is True
+
+
+  def test_mismatched():
+      assert is_balanced("(]") is False
+
+
+  def test_unclosed():
+      assert is_balanced("(()") is False
+
+
+  def test_extra_close():
+      assert is_balanced("())") is False
+
+
+  def test_with_other_chars():
+      assert is_balanced("a(b)c[d]") is True
+
+
+  def test_empty():
+      assert is_balanced("") is True
