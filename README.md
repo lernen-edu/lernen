@@ -24,7 +24,7 @@ everything that has shipped through that tag — no more, no less. The
 PRD (`docs/PRD.md`) describes the full system; this section tells you
 what is **actually working today**.
 
-### Shipped (through v0.3.1)
+### Shipped (through v0.3.2)
 
 - **`lernen setup`** — one-time backend configuration. Pick from
   Codex CLI, Gemini CLI, or OpenRouter. Validates the connection and
@@ -54,6 +54,10 @@ what is **actually working today**.
     `forge_log.md`) to `~/.local/share/lernen/manifests/<id>/`.
   - Lifecycle flags for managing forge state: `--reset`,
     `--restore=<ts>`, `--list-backups`, `--reset-stage=<name>`.
+    *(hardened in v0.3.2)* `--reset-stage` validates the stage name
+    *before* backing anything up — an unknown name is rejected with
+    the profile left byte-for-byte untouched — and `--list-backups`
+    / `--restore` work with no backend configured (offline recovery).
 
 - **`lernen work <curriculum-id>`** — Phase 1 sessions against a real,
   forge-published manifest:
