@@ -72,16 +72,16 @@ func ProductionForgeDeps() ForgeDeps {
 // invocation.
 func NewForgeCmd(deps ForgeDeps) *cobra.Command {
 	var (
-		devStage        string
-		resetFlag       bool
-		restoreFlag     string
-		listBackups     bool
-		resetStageFlag  string
+		devStage       string
+		resetFlag      bool
+		restoreFlag    string
+		listBackups    bool
+		resetStageFlag string
 	)
 	cmd := &cobra.Command{
 		Use:   "forge",
 		Short: "Author a custom curriculum (resumable; supports --reset, --restore, --list-backups, --reset-stage)",
-		Long: `Author a custom curriculum manifest through a guided dialogue.
+		Long: fmt.Sprintf(`Author a custom curriculum manifest through a guided dialogue.
 
 The forge runs in stages — goal elicitation, calibration, recommendation,
 source ingestion, per-chapter scaffolding, and reflection. Each stage
@@ -100,11 +100,10 @@ point you can run "lernen work <curriculum-id>" to start Phase 1.
 Flags:
       --reset                    back up current session and start fresh from Stage 0
       --reset-stage=<name>       back up <name> and downstream stages, then re-run from <name>
-                                 (name is a stage basename: goals, starting_point, recommendation,
-                                 ingestion, scaffolding, scaffolding-pass2, reflection)
+                                 (supported: %s)
       --restore=<timestamp>      revert to backup at <timestamp> (e.g. 2026-05-09T14:30:00)
       --list-backups             list available backups, newest-first
-  -h, --help                     help for forge`,
+  -h, --help                     help for forge`, forge.ResetStageList()),
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			set := 0
@@ -154,7 +153,7 @@ Flags:
 		"list available backups, newest-first")
 	// Same backtick trick: "<name>" displays as the flag's value name.
 	cmd.Flags().StringVar(&resetStageFlag, "reset-stage", "",
-		"back up `<name>` and downstream stages, then re-run from <name> (goals, starting_point, recommendation, ingestion, scaffolding, scaffolding-pass2, reflection)")
+		"back up `<name>` and downstream stages, then re-run from <name> ("+forge.ResetStageList()+")")
 	// main() prints the returned error; suppress cobra's duplicate.
 	cmd.SilenceUsage = true
 	cmd.SilenceErrors = true
@@ -212,12 +211,26 @@ func runForge(ctx context.Context, args forgeArgs, deps ForgeDeps) error {
 		return fmt.Errorf("forge: load config: %w", err)
 	}
 
-	backend, err := deps.BackendFactory(&cfg)
-	if err != nil {
-		return fmt.Errorf("forge: construct backend: %w", err)
+	// Backend is needed only for ops that re-run an AI stage. Filesystem-
+	// only ops (--list-backups, --restore) and a rejected --reset-stage
+	// must work offline / without an API key (dogfood #3).
+	needsBackend := !(args.listBackups || args.restore != "")
+	if args.resetStage != "" && !forge.ValidResetStage(args.resetStage) {
+		// A typo: let forge.Run return the unknown-stage error without
+		// touching the network. (A valid --reset-stage still needs the
+		// backend for the downstream re-run.)
+		needsBackend = false
 	}
-	if err := backend.HealthCheck(ctx); err != nil {
-		return fmt.Errorf("forge: backend health check failed (%s): %w", backend.Name(), err)
+
+	var backend backends.Backend
+	if needsBackend {
+		backend, err = deps.BackendFactory(&cfg)
+		if err != nil {
+			return fmt.Errorf("forge: construct backend: %w", err)
+		}
+		if err := backend.HealthCheck(ctx); err != nil {
+			return fmt.Errorf("forge: backend health check failed (%s): %w", backend.Name(), err)
+		}
 	}
 
 	profileDir, err := ProfileDir()
@@ -231,7 +244,7 @@ func runForge(ctx context.Context, args forgeArgs, deps ForgeDeps) error {
 	}
 
 	opts := forge.Options{
-		Backend:        backend,
+		Backend:        backend, // may be nil for FS-only ops; forge.Run routes those before its nil guard
 		ProfileDir:     profileDir,
 		Stage0Run:      goals.Run,
 		Stage1Run:      calibration.Run,

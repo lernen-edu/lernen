@@ -104,9 +104,6 @@ type Options struct {
 // When DevStage is set, Run bypasses resume detection. Stage 1 and
 // Stage 2 still require their prerequisites (orchestrator loads them).
 func Run(ctx context.Context, opts Options) error {
-	if opts.Backend == nil {
-		return fmt.Errorf("forge: Options.Backend is nil")
-	}
 	if opts.ProfileDir == "" {
 		return fmt.Errorf("forge: Options.ProfileDir is empty")
 	}
@@ -146,17 +143,26 @@ func Run(ctx context.Context, opts Options) error {
 		out = os.Stdout
 	}
 
+	// Filesystem-only maintenance ops: no backend required (dogfood #3).
 	if opts.ListBackups {
 		return runListBackups(opts, out)
 	}
 	if opts.Restore != "" {
 		return runRestore(opts, out)
 	}
-	if opts.Reset {
-		return runReset(ctx, opts, out)
-	}
+	// --reset-stage self-validates its name before requiring the backend
+	// (runResetStage's prologue), so route it here too: a typo fails
+	// offline and non-destructively; a valid stage's re-run still gets a
+	// backend (checked inside runResetStage).
 	if opts.ResetStage != "" {
 		return runResetStage(ctx, opts, out)
+	}
+	// Everything below re-runs an AI stage and requires a backend.
+	if opts.Backend == nil {
+		return fmt.Errorf("forge: Options.Backend is nil")
+	}
+	if opts.Reset {
+		return runReset(ctx, opts, out)
 	}
 
 	if opts.DevStage != "" {
@@ -482,6 +488,24 @@ func runListBackups(opts Options, out io.Writer) error {
 // "classified_chapters"), so they intercept before the generic
 // BackupFromStage call and perform their own backup logic.
 func runResetStage(ctx context.Context, opts Options, out io.Writer) error {
+	// Validate BEFORE any backup/rename: an unknown or typo'd stage name
+	// (including a profile basename like "classified_chapters" that is NOT
+	// a valid --reset-stage value) must leave the profile byte-identical
+	// (dogfood #1/#2).
+	if !ValidResetStage(opts.ResetStage) {
+		return fmt.Errorf("forge: --reset-stage: unknown stage %q (supported: %s)",
+			opts.ResetStage, ResetStageList())
+	}
+	// A valid stage means an AI re-run will follow; require the backend
+	// now so a missing one fails fast and non-destructively, before any
+	// backup (dogfood #3 — the validation phase stays backend-free; the
+	// re-run does not). Run routes --reset-stage here before its own
+	// Backend guard, so this is the authoritative nil check for this
+	// path; the identical error string keeps behavior consistent.
+	if opts.Backend == nil {
+		return fmt.Errorf("forge: Options.Backend is nil")
+	}
+
 	now := time.Now().UTC()
 
 	switch opts.ResetStage {
@@ -540,9 +564,9 @@ func runResetStage(ctx context.Context, opts Options, out io.Writer) error {
 			opts.ResetStage, now.Format("2006-01-02T15:04:05"), strings.Join(backed, ", "))
 	}
 	if err != nil {
-		// Two cases: unknown stage (no mutation) or partial filesystem
-		// failure mid-loop (some renames succeeded). The recovery hint
-		// only helps in the second case but is harmless in the first.
+		// Stage name is already validated above, so this is a partial
+		// filesystem failure mid-loop (some renames succeeded); the
+		// recovery timestamp lets the user --restore.
 		return fmt.Errorf("forge: --reset-stage (recover via --restore=%s): %w",
 			now.Format("2006-01-02T15:04:05"), err)
 	}
@@ -678,7 +702,7 @@ func dispatchByStageBasename(ctx context.Context, opts Options, basename string)
 		}
 		return dispatchReflection(ctx, opts, g, sp, rec, ing, cc)
 	default:
-		return fmt.Errorf("forge: --reset-stage: unknown stage %q (supported: goals, starting_point, recommendation, ingestion, scaffolding, scaffolding-pass2, reflection)", basename)
+		return fmt.Errorf("forge: --reset-stage: unknown stage %q (supported: %s)", basename, ResetStageList())
 	}
 }
 
