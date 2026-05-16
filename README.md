@@ -24,7 +24,7 @@ everything that has shipped through that tag — no more, no less. The
 PRD (`docs/PRD.md`) describes the full system; this section tells you
 what is **actually working today**.
 
-### Shipped (through v0.4.0)
+### Shipped (through v0.4.1)
 
 - **`lernen setup`** — one-time backend configuration. Pick from
   Codex CLI, Gemini CLI, or OpenRouter. Validates the connection and
@@ -58,6 +58,10 @@ what is **actually working today**.
     *before* backing anything up — an unknown name is rejected with
     the profile left byte-for-byte untouched — and `--list-backups`
     / `--restore` work with no backend configured (offline recovery).
+  - *(v0.4.1)* `lernen forge` operates on the active profile and takes
+    no `<curriculum-id>` (unlike `work`/`practice`/`status`, which each
+    require one). Passing one now returns a targeted hint explaining the
+    asymmetry instead of a generic "unknown command" error.
 
 - **`lernen work <curriculum-id>`** — Phase 1 sessions against a real,
   forge-published manifest:
@@ -69,12 +73,19 @@ what is **actually working today**.
     persists at `~/.local/share/lernen/progress/<id>/state.yaml`.
     `--chapter <arg>` flag overrides the resume target for one
     invocation without persisting.
-  - **Competency tracking** *(new in v0.3.0)*. `/competency` shows a
-    read-only, foundation-first table of how many clean demonstrations
-    you've shown for each competency against its gate thresholds, plus
-    a gate-readiness summary. Pure derivation from your recorded
-    progress — no AI call. Demonstrations now carry an `outcome`
-    (progress state is schema v2; older state auto-migrates on load).
+  - **Competency tracking** *(new in v0.3.0; refined in v0.4.1)*.
+    `/competency` shows a read-only, foundation-first table of how many
+    clean demonstrations you've shown for each competency against its
+    gate thresholds, plus a gate-readiness summary. Pure derivation from
+    your recorded progress — no AI call. Demonstrations now carry an
+    `outcome` (progress state is schema v2; older state auto-migrates on
+    load). *(v0.4.1)* A clean demonstration counts toward readiness only
+    if its assessed tier matches the competency's authored tier;
+    tier-mismatched demonstrations are excluded from the count and
+    footnoted rather than silently counted. The table also surfaces a
+    per-competency, display-only with-hint / needs-work struggle signal
+    — it makes attempted-and-struggled visible but never changes
+    gate-readiness.
   - **Explain-back gate** *(new in v0.3.0)*. Before the tutor engages
     on a stuck-on-a-problem turn, it asks you to say what you tried and
     what you think is wrong — closing the "just paste the error" reflex.
@@ -104,7 +115,9 @@ what is **actually working today**.
 - **`lernen status <curriculum-id>`** *(new in v0.3.1)* — the
   out-of-session twin of `/competency`: prints the foundation-first
   competency table, the gate-readiness summary, and the chapter
-  progress table. Pure derivation, no AI, read-only.
+  progress table. Pure derivation, no AI, read-only. *(v0.4.1)* shares
+  the same tier cross-check and display-only struggle signal as
+  `/competency`.
 
 - **`lernen gate <curriculum-id>`** *(new in v0.4.0)* — the Phase 1↔2
   capability exam. A continuous, resumable session of three
@@ -132,8 +145,11 @@ what is **actually working today**.
 - **Phase 1 polish.** Smarter practice selection — spaced-repetition /
   difficulty-ramp weak-area drilling (v0.3.1 ships the naive
   under-practiced weighting; `lernen practice` itself is shipped).
-  Refined competency assessment and an opt-in inverted-assistance
-  debug tutor inside the gate are also planned.
+  Deeper per-interaction competency assessment and an opt-in
+  inverted-assistance debug tutor inside the gate are also planned.
+  (v0.4.1 shipped the deterministic tier cross-check and the
+  display-only struggle signal; the per-interaction assessment cadence
+  is the remaining refinement.)
 - **`lernen review` / `lernen exercise`** — Phase 2 commands for
   AI-augmented engineering.
 - **More language adapters.** Go, Rust, Java, Perl, etc.
@@ -211,7 +227,7 @@ lernen review
 ```
 
 Steps 1–4 produce a working forge-author, tutor, AI-off practice loop,
-and the Phase 1↔2 capability gate through v0.4.0; step 5 (Phase 2) is
+and the Phase 1↔2 capability gate through v0.4.1; step 5 (Phase 2) is
 pending. See [Current status](#current-status) above for the full
 breakdown.
 

@@ -59,11 +59,16 @@ func Render(state *progress.State, curr *curriculum.Curriculum) string {
 		if name == "" {
 			name = s.ID
 		}
-		fmt.Fprintf(&b, "  %s  %-28s [%s]  demos %d/%d  chapters %d/%d  practice %d/%d\n",
+		fmt.Fprintf(&b, "  %s  %-28s [%s]  demos %d/%d  chapters %d/%d  practice %d/%d",
 			mark, name, s.Tier,
 			s.CleanDemonstrations, s.MinDemonstrations,
 			s.DistinctChapters, s.MinChapters,
 			s.PracticeModeDemos, s.MinPracticeMode)
+		if s.WithHintDemonstrations > 0 || s.NeedsWorkDemonstrations > 0 {
+			fmt.Fprintf(&b, "  (with-hint %d, needs-work %d)",
+				s.WithHintDemonstrations, s.NeedsWorkDemonstrations)
+		}
+		b.WriteByte('\n')
 	}
 
 	ready := GateReady(statuses)
@@ -87,6 +92,22 @@ func Render(state *progress.State, curr *curriculum.Curriculum) string {
 		b.WriteString("\nEvidence for competencies no longer in the manifest (kept, not counted):\n")
 		for _, s := range orphans {
 			fmt.Fprintf(&b, "  · %s — %d clean demonstration(s)\n", s.ID, s.CleanDemonstrations)
+		}
+	}
+
+	var mism []CompetencyStatus
+	for _, s := range manifest {
+		if len(s.TierMismatchedDemos) > 0 {
+			mism = append(mism, s)
+		}
+	}
+	if len(mism) > 0 {
+		b.WriteString("\nDemonstrations whose claimed tier does not match the authored tier (not counted):\n")
+		for _, s := range mism {
+			for _, m := range s.TierMismatchedDemos {
+				fmt.Fprintf(&b, "  · %s — claimed %s, authored %s (%d demonstration(s))\n",
+					s.ID, m.ClaimedTier, s.Tier, m.Count)
+			}
 		}
 	}
 	return b.String()

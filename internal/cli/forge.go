@@ -104,7 +104,17 @@ Flags:
       --restore=<timestamp>      revert to backup at <timestamp> (e.g. 2026-05-09T14:30:00)
       --list-backups             list available backups, newest-first
   -h, --help                     help for forge`, forge.ResetStageList()),
-		Args: cobra.NoArgs,
+		// Custom validator (not cobra.NoArgs) so a curriculum-id positional gets a
+		// targeted hint, not cobra's generic "unknown command". Intentionally pure:
+		// it runs before config/profile resolution, so the message carries no
+		// profile path (owner-approved; do not reroute through RunE to add one).
+		Args: func(_ *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("forge: %q given, but forge operates on the active profile and takes no curriculum-id "+
+					"(unlike `lernen work`/`practice`/`status`, which require one); run `lernen forge` with no arguments", args[0])
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			set := 0
 			if resetFlag {
