@@ -24,7 +24,7 @@ everything that has shipped through that tag — no more, no less. The
 PRD (`docs/PRD.md`) describes the full system; this section tells you
 what is **actually working today**.
 
-### Shipped (through v0.3.2)
+### Shipped (through v0.4.0)
 
 - **`lernen setup`** — one-time backend configuration. Pick from
   Codex CLI, Gemini CLI, or OpenRouter. Validates the connection and
@@ -106,6 +106,22 @@ what is **actually working today**.
   competency table, the gate-readiness summary, and the chapter
   progress table. Pure derivation, no AI, read-only.
 
+- **`lernen gate <curriculum-id>`** *(new in v0.4.0)* — the Phase 1↔2
+  capability exam. A continuous, resumable session of three
+  components: an **AI-off time-budgeted build** (graded by the real
+  test runner), **code comprehension** on short samples derived from
+  permissively-licensed open-source Python (predict the output and
+  identify a real defect), and a **debugging gauntlet** of pre-broken
+  programs you must fix until the tests pass. It is gated by a soft
+  foundation-competency precondition (shown first; you may attempt the
+  exam even if it is unmet, but the overall result will not pass until
+  it is met). Each completed component is checkpointed, so an
+  environment problem pauses — never fails — the attempt and you can
+  re-run `lernen gate` to resume. The verdict is a plain pass/fail;
+  on fail it names the components that did not pass and the gate is
+  re-attemptable. Pytest + pytest-json-report are pre-flighted before
+  the session starts.
+
 - **TUI slash commands.** `/help`, `/copy`, `/quit`, `/competency`,
   plus the chapter navigation commands above. Ctrl+L clears the
   visible screen
@@ -116,8 +132,8 @@ what is **actually working today**.
 - **Phase 1 polish.** Smarter practice selection — spaced-repetition /
   difficulty-ramp weak-area drilling (v0.3.1 ships the naive
   under-practiced weighting; `lernen practice` itself is shipped).
-- **`lernen gate`** — the build / comprehension / debugging exam
-  between Phase 1 and Phase 2.
+  Refined competency assessment and an opt-in inverted-assistance
+  debug tutor inside the gate are also planned.
 - **`lernen review` / `lernen exercise`** — Phase 2 commands for
   AI-augmented engineering.
 - **More language adapters.** Go, Rust, Java, Perl, etc.
@@ -187,16 +203,17 @@ lernen work <curriculum-id>
 lernen practice <curriculum-id>
 lernen status <curriculum-id>
 
-# 4. Capability gate between Phase 1 and Phase 2       [planned]
-lernen gate
+# 4. Capability gate between Phase 1 and Phase 2       [v0.4.0: shipped]
+lernen gate <curriculum-id>
 
 # 5. Phase 2 review of agentic-CLI-authored code       [planned]
 lernen review
 ```
 
-Steps 1–3b produce a working forge-author, tutor, and AI-off practice
-loop through v0.3.1; steps 4–5 are pending. See
-[Current status](#current-status) above for the full breakdown.
+Steps 1–4 produce a working forge-author, tutor, AI-off practice loop,
+and the Phase 1↔2 capability gate through v0.4.0; step 5 (Phase 2) is
+pending. See [Current status](#current-status) above for the full
+breakdown.
 
 See `docs/PRD.md` for the full architecture and pedagogical philosophy.
 
