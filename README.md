@@ -2,13 +2,9 @@
 
 **Learn to think before you prompt.**
 
-Lernen is an open-source command-line tool for vibe coders who want to move toward using AI as an engineering tool rather than a black box. It does this in two phases:
+Lernen is an open-source command-line tool for vibe coders who want genuine fluency in one programming language of their choice — the foundation that lets them evaluate AI-generated code critically instead of treating a model as a black box. Lernen's AI tutor is structurally prevented from writing code — it asks Socratic questions, gives hints, critiques code you've written, and explains concepts. You write every line.
 
-In **Phase 1**, you build genuine fluency in one programming language of your choice. Lernen's AI tutor is structurally prevented from writing code — it asks Socratic questions, gives hints, critiques code you've written, and explains concepts. You write every line.
-
-In **Phase 2**, you learn to direct, evaluate, and threat-model real agentic coding tools (Codex CLI, Gemini CLI, and others). Lernen becomes a critic and observer rather than the puppet master.
-
-Between the phases is a capability gate. You either pass, or you don't.
+The forge authors a personalized curriculum *with* you; the tutor takes you through it; and the capability gate is the capstone that proves the fluency. You either pass, or you don't.
 
 ## Why does this exist?
 
@@ -119,8 +115,8 @@ what is **actually working today**.
   the same tier cross-check and display-only struggle signal as
   `/competency`.
 
-- **`lernen gate <curriculum-id>`** *(new in v0.4.0)* — the Phase 1↔2
-  capability exam. A continuous, resumable session of three
+- **`lernen gate <curriculum-id>`** *(new in v0.4.0)* — the Lernen
+  capability capstone. A continuous, resumable session of three
   components: an **AI-off time-budgeted build** (graded by the real
   test runner), **code comprehension** on short samples derived from
   permissively-licensed open-source Python (predict the output and
@@ -150,8 +146,6 @@ what is **actually working today**.
   (v0.4.1 shipped the deterministic tier cross-check and the
   display-only struggle signal; the per-interaction assessment cadence
   is the remaining refinement.)
-- **`lernen review` / `lernen exercise`** — Phase 2 commands for
-  AI-augmented engineering.
 - **More language adapters.** Go, Rust, Java, Perl, etc.
 
 ## Install
@@ -219,17 +213,13 @@ lernen work <curriculum-id>
 lernen practice <curriculum-id>
 lernen status <curriculum-id>
 
-# 4. Capability gate between Phase 1 and Phase 2       [v0.4.0: shipped]
+# 4. Capability capstone (proves the fluency)          [v0.4.0: shipped]
 lernen gate <curriculum-id>
-
-# 5. Phase 2 review of agentic-CLI-authored code       [planned]
-lernen review
 ```
 
 Steps 1–4 produce a working forge-author, tutor, AI-off practice loop,
-and the Phase 1↔2 capability gate through v0.4.1; step 5 (Phase 2) is
-pending. See [Current status](#current-status) above for the full
-breakdown.
+and the capability capstone through v0.4.1. See
+[Current status](#current-status) above for the full breakdown.
 
 See `docs/PRD.md` for the full architecture and pedagogical philosophy.
 
