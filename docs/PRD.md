@@ -11,17 +11,13 @@ A separate working draft of this document lives in the project's private develop
 
 ## 1. Vision
 
-Lernen is an open-source command-line tool for vibe coders who want to move toward using AI as an engineering tool rather than a black box, in two phases.
+Lernen is an open-source command-line tool for vibe coders who want genuine fluency in one programming language — the foundation that lets them evaluate AI-generated code critically instead of treating a model as a black box.
 
-In **Phase 1**, the user develops genuine fluency in one programming language of their choice (Python, Go, Rust, Java, Perl, or whichever language has an installed `LanguageAdapter`). The AI tutor is structurally prevented from writing code — it asks Socratic questions, gives hints, critiques work the user has written, and explains concepts. The user produces every line.
+The user develops genuine fluency in one programming language of their choice (Python, Go, Rust, Java, Perl, or whichever language has an installed `LanguageAdapter`). The AI tutor is structurally prevented from writing code — it asks Socratic questions, gives hints, critiques work the user has written, and explains concepts. The user produces every line.
 
-In **Phase 2**, the user learns to direct, evaluate, and threat-model real agentic coding tools (Codex, Gemini, and others). Lernen becomes a critic and observer rather than the puppet master.
+The product's promise, in one sentence: *the AI cannot touch your code; you write every line until you can prove you don't need it to.*
 
-Between the phases is a capability gate. Either the user can build something non-trivial under AI-off conditions, read unfamiliar code fluently, and survive a debugging gauntlet, or they cannot. Time spent and chapters completed are not the signal.
-
-The product's promise, in one sentence: *In Phase 1, the AI cannot touch your code. In Phase 2, you learn how to let it touch your code safely.*
-
-The aim is for users who complete both phases to leave with the foundations to evaluate AI output and the judgment to know when to write code themselves and when to delegate — to be on a path toward AI-augmented engineering rather than blindly accepting whatever a model produces. How far along that path any individual user gets is up to them.
+That proof is the capability gate — the Lernen capstone. Either the user can build something non-trivial under AI-off conditions, read unfamiliar code fluently, and survive a debugging gauntlet, or they cannot. Time spent and chapters completed are not the signal. The capstone is where Lernen's job ends: a learner who passes it has the foundations to evaluate AI output and the judgment to know when to write code themselves rather than blindly accepting whatever a model produces. How far along that path any individual user goes from there is up to them.
 
 ---
 
@@ -39,7 +35,7 @@ Lernen is not for:
 
 ---
 
-## 3. The Two Phases
+## 3. The Fluency Mission
 
 ### Phase 1 — Fluency
 
@@ -57,19 +53,13 @@ Disabling these is possible only via an explicit `--training-wheels-off` flag wi
 
 ### The Gate
 
-Transition from Phase 1 to Phase 2 requires passing a capability gate composed of three components, attempted via `lernen gate`:
+The gate is the **Lernen capability capstone** — the proof that the learner has the fluency the product set out to build. It is composed of three components, attempted via `lernen gate`:
 
 1. **AI-off build.** Build a small but non-trivial program from scratch under timed conditions, with no AI assistance.
 2. **Code comprehension.** Read three unfamiliar code samples drawn from real open-source projects in the user's chosen language, predict their output, and identify at least one bug or design issue per sample.
 3. **Debugging gauntlet.** Fix three pre-broken programs of escalating difficulty.
 
-The gate is pass/fail and re-attemptable. There is no checklist, no completion percentage, and no time-based progression.
-
-### Phase 2 — AI-Augmented Engineering
-
-The user becomes proficient at the skills that matter for working alongside AI: writing specifications an agent can act on; reading AI-generated code critically; deciding what to build by hand versus delegate; adversarially testing AI output; threat modeling AI suggestions; managing context; debugging AI failures; code review as a primary skill.
-
-In Phase 2, Lernen stops owning the editor experience. The user opens their preferred editor and uses Codex CLI, Gemini CLI, or another agentic tool directly. Lernen becomes a companion invoked through `lernen review` after meaningful changes.
+The gate is pass/fail and re-attemptable. There is no checklist, no completion percentage, and no time-based progression. The verdict is intentionally terminal: it is the end of Lernen's job and is consumed by nothing downstream.
 
 ---
 
@@ -109,11 +99,7 @@ Manifests live on the user's local machine. The project does not host, curate, o
 
 ### The Tutor
 
-In Phase 1, the tutor is a demanding mentor. Pure Socratic is exhausting; drill instructor alienates; peer pair-programmer undermines rigor. Demanding mentor — asks first, explains when asking has run its course, willing to say "you're not ready for this answer yet, back up" — is the right default. The same voice runs the forge, the runtime tutor, the gate, and Phase 2 review.
-
-### Phase 2 Review
-
-After the gate, the user works in their preferred editor with their preferred agentic CLI. Lernen is invoked on demand via `lernen review` to read a git diff and (where available) the agentic tool's conversation transcript, then provide structured feedback on whether the user understood what the AI did, whether they checked for specific failure modes, what they would have done differently, what the AI missed.
+In Phase 1, the tutor is a demanding mentor. Pure Socratic is exhausting; drill instructor alienates; peer pair-programmer undermines rigor. Demanding mentor — asks first, explains when asking has run its course, willing to say "you're not ready for this answer yet, back up" — is the right default. The same voice runs the forge, the runtime tutor, and the gate.
 
 ---
 
