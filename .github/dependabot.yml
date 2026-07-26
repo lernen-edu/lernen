@@ -1,0 +1,52 @@
+# .github/dependabot.yml
+#
+# Weekly dependency updates. Generated from this repo's actual manifest
+# locations -- every `directory` below points at a real manifest, so
+# Dependabot does not silently no-op on a path that does not exist.
+#
+# Minor and patch updates are GROUPED into a single PR per ecosystem per
+# week to keep the queue reviewable; major bumps still arrive individually
+# because they deserve to be looked at on their own.
+#
+# Note that Dependabot SECURITY updates (driven by advisories) fire
+# regardless of this file. This config adds the scheduled, stay-current
+# half that was missing.
+
+version: 2
+
+updates:
+  # GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "deps(github-actions)"
+      include: "scope"
+    groups:
+      actions-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Go modules: root
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "gomod"
+    commit-message:
+      prefix: "deps(gomod)"
+      include: "scope"
+    groups:
+      gomod-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
